@@ -6,6 +6,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -93,18 +94,18 @@ public class MyServlet extends HttpServlet
 		String message = "";
 		String value = "";
 		Cookie c;
-		String local_ip = getIPs().get(0);
+		InetAddress local_ip = getIP();
 		
 		// check if this is client's first request. if so, construct new cookie and new SessionState
 		if (myCookie == null)
 		{
 			sess[0] = String.valueOf(sessionID);
-			sess[1] = local_ip;
+			sess[1] = local_ip.getHostAddress();
 			ver = 1;
 			message = "Hello, User!";
 			long curTime = System.currentTimeMillis() / 1000;
 			timeout = curTime + expiry;
-			loc[0] = getIPs().get(0);
+			loc[0] = getIP().getHostAddress();
 			loc[1] = location;				// TODO: choose random server from local server's View
 			value = concatValue(sess, ver, loc);
 			
@@ -136,7 +137,7 @@ public class MyServlet extends HttpServlet
 			for (String s : locs)
 			{
 				// if the SessionState is stored in local server, simply reconstruct cookie and update it
-				if (!flag && s == local_ip)
+				if (!flag && (local_ip.getHostAddress()).equals(s))
 				{
 					sess[0] = String.valueOf(getID(myCookie));
 					sess[1] = getIP(myCookie);
@@ -203,7 +204,7 @@ public class MyServlet extends HttpServlet
 		String msg = "";
 		String value = "";
 		Cookie c;
-		String local_ip = getIPs().get(0);
+		InetAddress local_ip = getIP();
 		
 		// check if SessionState is stored in local server
 		// i.e. check server_primary or server_backup == server_local
@@ -212,7 +213,7 @@ public class MyServlet extends HttpServlet
 		for (String s : locs)
 		{
 			// if the SessionState is stored in local server, simply reconstruct cookie and update it
-			if (!flag && local_ip.equals(s))
+			if (!flag && (local_ip.getHostAddress()).equals(s))
 			{
 				// replace and refresh buttons
 				if (!action.equals("logout"))
@@ -358,36 +359,50 @@ public class MyServlet extends HttpServlet
 	}
 	
 	// running on local tomcat
-	private List<String> getIPs()
+	private InetAddress getIP()
 	{
-		List<String> ret = new ArrayList<String>();
-		String ip;
-	    try 
-	    {
-	        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-	        while (interfaces.hasMoreElements()) 
-	        {
-	            NetworkInterface iface = interfaces.nextElement();
-	            // filters out 127.0.0.1 and inactive interfaces
-	            if (iface.isLoopback() || !iface.isUp())
-	                continue;
-
-	            Enumeration<InetAddress> addresses = iface.getInetAddresses();
-	            while(addresses.hasMoreElements()) 
-	            {
-	                InetAddress addr = addresses.nextElement();
-	                ip = addr.getHostAddress();
-	                //System.out.println(iface.getDisplayName() + " " + ip);
-	                //ret.add(iface.getDisplayName() + " " + ip);
-	                ret.add(ip);
-	            }
-	        }
-	        return ret;
-	    } 
-	    catch (SocketException e) 
-	    {
-	        throw new RuntimeException(e);
-	    }
+//		List<String> ret = new ArrayList<String>();
+//		String ip;
+//	    try 
+//	    {
+//	        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+//	        while (interfaces.hasMoreElements()) 
+//	        {
+//	            NetworkInterface iface = interfaces.nextElement();
+//	            // filters out 127.0.0.1 and inactive interfaces
+//	            if (iface.isLoopback() || !iface.isUp())
+//	                continue;
+//
+//	            Enumeration<InetAddress> addresses = iface.getInetAddresses();
+//	            while(addresses.hasMoreElements()) 
+//	            {
+//	                InetAddress addr = addresses.nextElement();
+//	                ip = addr.getHostAddress();
+//	                //System.out.println(iface.getDisplayName() + " " + ip);
+//	                //ret.add(iface.getDisplayName() + " " + ip);
+//	                ret.add(ip);
+//	            }
+//	        }
+//	        return ret;
+//	    } 
+//	    catch (SocketException e) 
+//	    {
+//	        throw new RuntimeException(e);
+//	    }
+		
+		InetAddress addr = null;;
+		
+		try 
+		{
+			addr = InetAddress.getByName(InetAddress.getLocalHost().getHostAddress());
+		} 
+		catch (UnknownHostException e) 
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return addr;
 	}
 	
 	// stub for SessionRead
