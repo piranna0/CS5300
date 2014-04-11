@@ -113,6 +113,14 @@ public class MyServlet extends HttpServlet
 			c.setMaxAge(expiry);	// set timeout!!!
 			c.setComment(message);
 			
+			// send cookie back to client
+			response.addCookie(c);
+			
+			// forward information to jsp page
+			request.setAttribute("myVal", c.getValue());
+			request.setAttribute("myMessage", c.getComment());
+	        request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
+
 			sessionID++;
 		}
 		// otherwise, check if SessionState is stored in local server
@@ -159,7 +167,7 @@ public class MyServlet extends HttpServlet
 					request.setAttribute("myVal", c.getValue());
 					request.setAttribute("myMessage", c.getComment());
 			        request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
-					
+
 					flag = true;
 				}
 			}
@@ -200,7 +208,7 @@ public class MyServlet extends HttpServlet
 		for (String s : locs)
 		{
 			// if the SessionState is stored in local server, simply reconstruct cookie and update it
-			if (!flag && s == local_ip)
+			if (!flag && local_ip.equals(s))
 			{
 				// replace and refresh buttons
 				if (!action.equals("logout"))
