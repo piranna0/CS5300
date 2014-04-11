@@ -410,6 +410,7 @@ public class MyServlet extends HttpServlet
 		//TODO
 		try {
 			DatagramSocket rpcSocket = new DatagramSocket();
+			int newCallId = callId.getAndAdd(1);
             DatagramPacket recvPkt = null;
             return recvPkt;
 		} catch (SocketException e) {
