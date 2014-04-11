@@ -1,6 +1,8 @@
 package myPackage;
 
 import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -8,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -28,6 +31,7 @@ public class MyServlet extends HttpServlet
 	private String cookieName = "CS5300PROJ1SESSION";
 	private final int expiry = 10;
 	private final String location = "0";
+	private static AtomicInteger callId = new AtomicInteger();
 	
 	private Thread daemonThread;
 	private boolean threadStarted = false;
@@ -80,7 +84,7 @@ public class MyServlet extends HttpServlet
 		}
 		
 		Cookie[] cookies = request.getCookies();
-		Cookie myCookie = FindCookie(cookies, cookieName);		// current client's cookie
+		Cookie myCookie = findCookie(cookies, cookieName);		// current client's cookie
 		
 		String[] sess = new String[2];
 		int ver;
@@ -89,7 +93,7 @@ public class MyServlet extends HttpServlet
 		String message = "";
 		String value = "";
 		Cookie c;
-		String local_ip = GetIPs().get(0);
+		String local_ip = getIPs().get(0);
 		
 		// check if this is client's first request. if so, construct new cookie and new SessionState
 		if (myCookie == null)
@@ -100,9 +104,9 @@ public class MyServlet extends HttpServlet
 			message = "Hello, User!";
 			long curTime = System.currentTimeMillis() / 1000;
 			timeout = curTime + expiry;
-			loc[0] = GetIPs().get(0);
+			loc[0] = getIPs().get(0);
 			loc[1] = location;				// TODO: choose random server from local server's View
-			value = ConcatValue(sess, ver, loc);
+			value = concatValue(sess, ver, loc);
 			
 			// store new info to map
 			SessionState state = new SessionState(sess, ver, message, timeout, loc);
@@ -127,15 +131,15 @@ public class MyServlet extends HttpServlet
 		// i.e. check server_primary or server_backup == server_local
 		else 
 		{
-			String[] locs = GetLoc(myCookie);
+			String[] locs = getLoc(myCookie);
 			boolean flag = false;
 			for (String s : locs)
 			{
 				// if the SessionState is stored in local server, simply reconstruct cookie and update it
 				if (!flag && s == local_ip)
 				{
-					sess[0] = String.valueOf(GetID(myCookie));
-					sess[1] = GetIP(myCookie);
+					sess[0] = String.valueOf(getID(myCookie));
+					sess[1] = getIP(myCookie);
 					SessionState ss = map.get(Integer.valueOf(sess[0]));
 					if (ss == null)
 						throw new ServletException("Current session has timed out.");
@@ -144,9 +148,9 @@ public class MyServlet extends HttpServlet
 					message = ss.message;
 					long curTime = System.currentTimeMillis() / 1000;
 					timeout = curTime + expiry;
-					loc[0] = GetLoc(myCookie)[0];
-					loc[1] = GetLoc(myCookie)[1];
-					value = ConcatValue(sess, ver, loc);
+					loc[0] = getLoc(myCookie)[0];
+					loc[1] = getLoc(myCookie)[1];
+					value = concatValue(sess, ver, loc);
 					
 					// store updated info to map
 					SessionState state = new SessionState(sess, ver, message, timeout, loc);
@@ -186,7 +190,7 @@ public class MyServlet extends HttpServlet
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException 
 	{
 		Cookie[] cookies = request.getCookies();
-		Cookie myCookie = FindCookie(cookies, cookieName);		// current client's cookie
+		Cookie myCookie = findCookie(cookies, cookieName);		// current client's cookie
 		
 		String action = request.getParameter("action");
 		String message = null;
@@ -199,11 +203,11 @@ public class MyServlet extends HttpServlet
 		String msg = "";
 		String value = "";
 		Cookie c;
-		String local_ip = GetIPs().get(0);
+		String local_ip = getIPs().get(0);
 		
 		// check if SessionState is stored in local server
 		// i.e. check server_primary or server_backup == server_local
-		String[] locs = GetLoc(myCookie);
+		String[] locs = getLoc(myCookie);
 		boolean flag = false;
 		for (String s : locs)
 		{
@@ -213,8 +217,8 @@ public class MyServlet extends HttpServlet
 				// replace and refresh buttons
 				if (!action.equals("logout"))
 				{
-					sess[0] = String.valueOf(GetID(myCookie));
-					sess[1] = GetIP(myCookie);
+					sess[0] = String.valueOf(getID(myCookie));
+					sess[1] = getIP(myCookie);
 					SessionState ss = map.get(Integer.valueOf(sess[0]));
 					if (ss == null)
 						throw new ServletException("Current session has timed out.");
@@ -235,7 +239,7 @@ public class MyServlet extends HttpServlet
 					timeout = curTime + expiry;
 					loc[0] = ss.location[0];
 					loc[1] = ss.location[1];
-					value = ConcatValue(sess, ver, loc);
+					value = concatValue(sess, ver, loc);
 					
 					// store updated info to map
 					SessionState state = new SessionState(sess, ver, msg, timeout, loc);
@@ -261,7 +265,7 @@ public class MyServlet extends HttpServlet
 				else
 				{
 					// remove session info from map
-					map.remove(GetID(myCookie));
+					map.remove(getID(myCookie));
 					
 					// kill the cookie
 					myCookie.setMaxAge(0);
@@ -286,7 +290,7 @@ public class MyServlet extends HttpServlet
 	}
 
 	// search for cookie if it exists already, else return null
-	private Cookie FindCookie(Cookie[] cookies, String name)
+	private Cookie findCookie(Cookie[] cookies, String name)
 	{
 		Cookie myCookie = null;
 		
@@ -303,7 +307,7 @@ public class MyServlet extends HttpServlet
 	}
 	
 	// returns the session ID of the Cookie c
-	private int GetID(Cookie c)
+	private int getID(Cookie c)
 	{
 		if (c != null)
 		{
@@ -316,7 +320,7 @@ public class MyServlet extends HttpServlet
 			return -1;
 	}
 	// returns the serverID of the Cookie c
-	private String GetIP(Cookie c)
+	private String getIP(Cookie c)
 	{
 		if (c != null)
 		{
@@ -329,7 +333,7 @@ public class MyServlet extends HttpServlet
 			return null;
 	}
 	// returns the locations (primary, backup ips)
-	private String[] GetLoc(Cookie c)
+	private String[] getLoc(Cookie c)
 	{
 		String[] ret = new String[2];
 		if (c != null)
@@ -346,7 +350,7 @@ public class MyServlet extends HttpServlet
 	}
 	
 	// constructs the value string for session states
-	private String ConcatValue(String[] sess, int ver, String[] loc)
+	private String concatValue(String[] sess, int ver, String[] loc)
 	{
 		return sess[0] + "_" + sess[1] + "_" + 
 				String.valueOf(ver) + "_" + 
@@ -354,7 +358,7 @@ public class MyServlet extends HttpServlet
 	}
 	
 	// running on local tomcat
-	private List<String> GetIPs()
+	private List<String> getIPs()
 	{
 		List<String> ret = new ArrayList<String>();
 		String ip;
@@ -384,6 +388,20 @@ public class MyServlet extends HttpServlet
 	    {
 	        throw new RuntimeException(e);
 	    }
+	}
+	
+	// stub for SessionRead
+	private DatagramPacket sessionRead(int sessionId, int sessionVersionNum) {
+		//TODO
+		try {
+			DatagramSocket rpcSocket = new DatagramSocket();
+            DatagramPacket recvPkt = null;
+            return recvPkt;
+		} catch (SocketException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        return null;
 	}
 
 	
