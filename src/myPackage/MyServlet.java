@@ -149,11 +149,15 @@ public class MyServlet extends HttpServlet
 					message = ss.message;
 					long curTime = System.currentTimeMillis() / 1000;
 					timeout = curTime + expiry;
-					loc[0] = getLoc(myCookie)[0];
+					loc[0] = getIP().getHostAddress();					
+					// choose a backup server
+					// TODO: call SessionWrite() to backup server and wait for successful response
+					// if (fail) { loc[1] = null; }
+					// else { loc[1] = // TODO: backup server - choose at random from local server's view }
 					loc[1] = getLoc(myCookie)[1];
 					value = concatValue(sess, ver, loc);
 					
-					// store updated info to map
+					// store updated info to map (choose primary server)
 					SessionState state = new SessionState(sess, ver, message, timeout, loc);
 					map.replace(Integer.valueOf(sess[0]), state);
 					
@@ -238,11 +242,15 @@ public class MyServlet extends HttpServlet
 					msg = message;
 					long curTime = System.currentTimeMillis() / 1000;
 					timeout = curTime + expiry;
-					loc[0] = ss.location[0];
+					loc[0] = getIP().getHostAddress();
+					// choose a backup server
+					// TODO: call SessionWrite() to backup server and wait for successful response
+					// if (fail) { loc[1] = null; }
+					// else { loc[1] = // TODO: backup server - choose at random from local server's view }
 					loc[1] = ss.location[1];
 					value = concatValue(sess, ver, loc);
 					
-					// store updated info to map
+					// store updated info to map (choose primary server)
 					SessionState state = new SessionState(sess, ver, msg, timeout, loc);
 					map.replace(Integer.valueOf(sess[0]), state);
 					
@@ -361,36 +369,7 @@ public class MyServlet extends HttpServlet
 	// running on local tomcat
 	private InetAddress getIP()
 	{
-//		List<String> ret = new ArrayList<String>();
-//		String ip;
-//	    try 
-//	    {
-//	        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-//	        while (interfaces.hasMoreElements()) 
-//	        {
-//	            NetworkInterface iface = interfaces.nextElement();
-//	            // filters out 127.0.0.1 and inactive interfaces
-//	            if (iface.isLoopback() || !iface.isUp())
-//	                continue;
-//
-//	            Enumeration<InetAddress> addresses = iface.getInetAddresses();
-//	            while(addresses.hasMoreElements()) 
-//	            {
-//	                InetAddress addr = addresses.nextElement();
-//	                ip = addr.getHostAddress();
-//	                //System.out.println(iface.getDisplayName() + " " + ip);
-//	                //ret.add(iface.getDisplayName() + " " + ip);
-//	                ret.add(ip);
-//	            }
-//	        }
-//	        return ret;
-//	    } 
-//	    catch (SocketException e) 
-//	    {
-//	        throw new RuntimeException(e);
-//	    }
-		
-		InetAddress addr = null;;
+		InetAddress addr = null;
 		
 		try 
 		{
