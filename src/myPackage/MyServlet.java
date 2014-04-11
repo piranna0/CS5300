@@ -1,7 +1,11 @@
 package myPackage;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -78,70 +82,94 @@ public class MyServlet extends HttpServlet
 		Cookie[] cookies = request.getCookies();
 		Cookie myCookie = FindCookie(cookies, cookieName);		// current client's cookie
 		
-		// client's first request, construct new cookie and new SessionState
-		int sess, ver;
+		String[] sess = new String[2];
+		int ver;
 		long timeout;
-		String message, loc, value;
+		String[] loc = new String[2];
+		String message = "";
+		String value = "";
 		Cookie c;
-		if (!map.containsKey(GetID(myCookie)))
+		String local_ip = GetIPs().get(0);
+		
+		// check if this is client's first request. if so, construct new cookie and new SessionState
+		if (myCookie == null)
 		{
-			sess = sessionID;
+			sess[0] = String.valueOf(sessionID);
+			sess[1] = local_ip;
 			ver = 1;
 			message = "Hello, User!";
 			long curTime = System.currentTimeMillis() / 1000;
 			timeout = curTime + expiry;
-			loc = location;
-			value = ConcatValue(sess, ver, timeout, loc);
+			loc[0] = GetIPs().get(0);
+			loc[1] = location;				// TODO: choose random server from local server's View
+			value = ConcatValue(sess, ver, loc);
 			
 			// store new info to map
-			SessionState state = new SessionState(sess, ver, message, timeout);
-			map.put(sess, state);
+			SessionState state = new SessionState(sess, ver, message, timeout, loc);
+			map.put(Integer.valueOf(sess[0]), state);
 			
 			// construct cookie
 			c = new Cookie(cookieName, value);
-			c.setVersion(ver);
-			c.setMaxAge(expiry);
-			c.setPath(loc);
+			c.setMaxAge(expiry);	// set timeout!!!
 			c.setComment(message);
 			
 			sessionID++;
 		}
-		// otherwise, reconstruct cookie and update SessionState
-		else
+		// otherwise, check if SessionState is stored in local server
+		// i.e. check server_primary or server_backup == server_local
+		else 
 		{
-			sess = GetID(myCookie);
-			SessionState ss = map.get(sess);
-			if (ss == null)
-				throw new ServletException("Current session has timed out.");
-			ver = ss.version;
-			ver++;
-			message = ss.message;
-			long curTime = System.currentTimeMillis() / 1000;
-			timeout = curTime + expiry;
-			loc = location;
-			value = ConcatValue(sess, ver, timeout, loc);
-			
-			// store updated info to map
-			SessionState state = new SessionState(sess, ver, message, timeout);
-			map.replace(sess, state);
-			
-			// reconstruct cookie
-			myCookie.setMaxAge(0);		// kill current cookie
-			myCookie.setValue(null);
-			c = new Cookie(cookieName, value);
-			c.setVersion(ver);
-			c.setMaxAge(expiry);
-			c.setPath(loc);
-			c.setComment(message);
+			String[] locs = GetLoc(myCookie);
+			boolean flag = false;
+			for (String s : locs)
+			{
+				// if the SessionState is stored in local server, simply reconstruct cookie and update it
+				if (!flag && s == local_ip)
+				{
+					sess[0] = String.valueOf(GetID(myCookie));
+					sess[1] = GetIP(myCookie);
+					SessionState ss = map.get(Integer.valueOf(sess[0]));
+					if (ss == null)
+						throw new ServletException("Current session has timed out.");
+					ver = ss.version;
+					ver++;
+					message = ss.message;
+					long curTime = System.currentTimeMillis() / 1000;
+					timeout = curTime + expiry;
+					loc[0] = GetLoc(myCookie)[0];
+					loc[1] = GetLoc(myCookie)[1];
+					value = ConcatValue(sess, ver, loc);
+					
+					// store updated info to map
+					SessionState state = new SessionState(sess, ver, message, timeout, loc);
+					map.replace(Integer.valueOf(sess[0]), state);
+					
+					// kill current cookie
+					myCookie.setMaxAge(0);
+					myCookie.setValue(null);
+					// reconstruct cookie
+					c = new Cookie(cookieName, value);
+					c.setMaxAge(expiry);		// set timeout!!!
+					c.setComment(message);
+					
+					// send cookie back to client
+					response.addCookie(c);
+					
+					// forward information to jsp page
+					request.setAttribute("myVal", c.getValue());
+					request.setAttribute("myMessage", c.getComment());
+			        request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
+					
+					flag = true;
+				}
+			}
+			// if the SessionState is stored in another server, execute RPC calls
+			if (!flag)
+			{
+				// TODO: SessionRead stuff here
+			}
 		}
-
-		// send cookie back to client
-		response.addCookie(c);
 		
-		// forward information to jsp page
-		request.setAttribute("myVal", c.getValue());
-		request.setAttribute("myMessage", c.getComment());
-        request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
 	}
 
 	/**
@@ -155,72 +183,96 @@ public class MyServlet extends HttpServlet
 		String action = request.getParameter("action");
 		String message = null;
 		
-		// replace and refresh buttons
-		if (!action.equals("logout"))
+		// update cookie parameters
+		String[] sess = new String[2];
+		int ver;
+		long timeout;
+		String[] loc = new String[2];
+		String msg = "";
+		String value = "";
+		Cookie c;
+		String local_ip = GetIPs().get(0);
+		
+		// check if SessionState is stored in local server
+		// i.e. check server_primary or server_backup == server_local
+		String[] locs = GetLoc(myCookie);
+		boolean flag = false;
+		for (String s : locs)
 		{
-			// update cookie parameters
-			int sess, ver;
-			long timeout;
-			String msg, loc, value;
-			Cookie c;
-			sess = GetID(myCookie);
-			SessionState ss = map.get(sess);
-			if (ss == null)
-				throw new ServletException("Current session has timed out.");
-			ver = ss.version;
-			ver++;
-			if (action.equals("replace"))
+			// if the SessionState is stored in local server, simply reconstruct cookie and update it
+			if (!flag && s == local_ip)
 			{
-				// retrieve message from form
-				message = request.getParameter("message");
+				// replace and refresh buttons
+				if (!action.equals("logout"))
+				{
+					sess[0] = String.valueOf(GetID(myCookie));
+					sess[1] = GetIP(myCookie);
+					SessionState ss = map.get(Integer.valueOf(sess[0]));
+					if (ss == null)
+						throw new ServletException("Current session has timed out.");
+					ver = ss.version;
+					ver++;
+					if (action.equals("replace"))
+					{
+						// retrieve message from form
+						message = request.getParameter("message");
+					}
+					else if (action.equals("refresh"))
+					{
+						// retrieve message from cookie
+						message = ss.message;
+					}
+					msg = message;
+					long curTime = System.currentTimeMillis() / 1000;
+					timeout = curTime + expiry;
+					loc[0] = ss.location[0];
+					loc[1] = ss.location[1];
+					value = ConcatValue(sess, ver, loc);
+					
+					// store updated info to map
+					SessionState state = new SessionState(sess, ver, msg, timeout, loc);
+					map.replace(Integer.valueOf(sess[0]), state);
+					
+					// kill current cookie
+					myCookie.setMaxAge(0);
+					myCookie.setValue(null);
+					// reconstruct cookie
+					c = new Cookie(cookieName, value);
+					c.setMaxAge(expiry);		// set timeout!!!
+					c.setComment(msg);
+					
+					// send cookie back to client
+					response.addCookie(c);
+					
+					// forward information to jsp page
+					request.setAttribute("myVal", c.getValue());
+					request.setAttribute("myMessage", c.getComment());
+			        request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
+				}
+				// logout button
+				else
+				{
+					// remove session info from map
+					map.remove(GetID(myCookie));
+					
+					// kill the cookie
+					myCookie.setMaxAge(0);
+					myCookie.setValue(null);
+					
+					// send cookie back to client
+					response.addCookie(myCookie);
+					
+					// forward information to jsp page and display it
+			        request.getRequestDispatcher("/logout.jsp").forward(request, response);
+				}
+				
+				flag = true;
 			}
-			else if (action.equals("refresh"))
-			{
-				// retrieve message from cookie
-				message = ss.message;
-			}
-			msg = message;
-			long curTime = System.currentTimeMillis() / 1000;
-			timeout = curTime + expiry;
-			loc = location;
-			value = ConcatValue(sess, ver, timeout, loc);
-			
-			// store updated info to map
-			SessionState state = new SessionState(sess, ver, msg, timeout);
-			map.replace(sess, state);
-			
-			// reconstruct cookie
-			myCookie.setMaxAge(0);		// kill current cookie
-			myCookie.setValue(null);
-			c = new Cookie(cookieName, value);
-			c.setVersion(ver);
-			c.setMaxAge(expiry);
-			c.setPath(loc);
-			c.setComment(msg);
-			
-			// send cookie back to client
-			response.addCookie(c);
-			
-			// forward information to jsp page and display it
-			request.setAttribute("myVal", c.getValue());
-			request.setAttribute("myMessage", c.getComment());
-	        request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
 		}
-		// logout button
-		else
+		// if the SessionState is stored in another server, execute RPC calls
+		if (!flag)
 		{
-			// remove session info from map
-			map.remove(GetID(myCookie));
-			
-			// kill the cookie
-			myCookie.setMaxAge(0);
-			myCookie.setValue(null);
-			
-			// send cookie back to client
-			response.addCookie(myCookie);
-			
-			// forward information to jsp page and display it
-	        request.getRequestDispatcher("/logout.jsp").forward(request, response);
+			// TODO: SessionRead stuff here
 		}
 		
 	}
@@ -255,14 +307,78 @@ public class MyServlet extends HttpServlet
 		else 
 			return -1;
 	}
+	// returns the serverID of the Cookie c
+	private String GetIP(Cookie c)
+	{
+		if (c != null)
+		{
+			String val = c.getValue();
+			String[] tokens = val.split("_");
+			
+			return String.valueOf(tokens[1]);
+		}
+		else 
+			return null;
+	}
+	// returns the locations (primary, backup ips)
+	private String[] GetLoc(Cookie c)
+	{
+		String[] ret = new String[2];
+		if (c != null)
+		{
+			String val = c.getValue();
+			String[] tokens = val.split("_");
+			
+			ret[0] = tokens[3];
+			ret[1] = tokens[4];
+			return ret;
+		}
+		else 
+			return null;
+	}
 	
 	// constructs the value string for session states
-	private String ConcatValue(int sess, int ver, long timeout, String loc)
+	private String ConcatValue(String[] sess, int ver, String[] loc)
 	{
-		return String.valueOf(sess) + "_" + 
+		return sess[0] + "_" + sess[1] + "_" + 
 				String.valueOf(ver) + "_" + 
-				String.valueOf(timeout) + "_" + 
-				loc;
+				loc[0] + "_" + loc[1];
 	}
+	
+	// running on local tomcat
+	private List<String> GetIPs()
+	{
+		List<String> ret = new ArrayList<String>();
+		String ip;
+	    try 
+	    {
+	        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+	        while (interfaces.hasMoreElements()) 
+	        {
+	            NetworkInterface iface = interfaces.nextElement();
+	            // filters out 127.0.0.1 and inactive interfaces
+	            if (iface.isLoopback() || !iface.isUp())
+	                continue;
+
+	            Enumeration<InetAddress> addresses = iface.getInetAddresses();
+	            while(addresses.hasMoreElements()) 
+	            {
+	                InetAddress addr = addresses.nextElement();
+	                ip = addr.getHostAddress();
+	                //System.out.println(iface.getDisplayName() + " " + ip);
+	                //ret.add(iface.getDisplayName() + " " + ip);
+	                ret.add(ip);
+	            }
+	        }
+	        return ret;
+	    } 
+	    catch (SocketException e) 
+	    {
+	        throw new RuntimeException(e);
+	    }
+	}
+
+	
+	
 	
 }
