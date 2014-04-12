@@ -6,6 +6,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -390,12 +391,17 @@ public class MyServlet extends HttpServlet
 	    }
 	}
 	
-	// stub for SessionRead
-	private DatagramPacket sessionRead(int sessionId, int sessionVersionNum) {
+	// sessionRead, sent by this server to another
+	// returns a packet containing the message
+	private DatagramPacket sessionRead(
+			int sessNum, int serverId , int sessionVersionNum, 
+			InetAddress address, int port) {
 		//TODO
 		try {
 			DatagramSocket rpcSocket = new DatagramSocket();
 			int newCallId = callId.getAndAdd(1);
+			ByteBuffer bbuf = ByteBuffer.allocate(4); //TODO: HOW MANY BYTES??
+			byte[] outBuf = bbuf.array();
             DatagramPacket recvPkt = null;
             return recvPkt;
 		} catch (SocketException e) {
@@ -404,8 +410,36 @@ public class MyServlet extends HttpServlet
 		}
         return null;
 	}
-
 	
+	// sessionWrite, sent by this server to another server
+	// returns a packet (indicating success)
+	private DatagramPacket sessionWrite(
+			int sessNum, int serverId, int sessionVersionNum, 
+			String msg, int discard_time, InetAddress address, int port) {
+		return null;
+	}
 	
+	// for the daemon thread:
+	// returns whether the byte array is a read or write request
+	private boolean readOrWrite(byte[] buffer) {
+		return true;
+	}
+	
+	// unpackage the received byte array (for the rpc handler thread)
+	// byte array contains:
+	// callId, operationCode, sessionNum, serverId, sessionVersionNum
+	// returned int array contains:
+	// sessionNum, serverId, sessionVersionNum
+	private int[] unpackReadRequest(byte[] buffer) {
+		return null;
+	}
+	
+	// unpackage the write request byte array (for the rpc handler thread)
+	// byte array contains:
+	// callId, operationCode, sessionNum, serverId, sessionVersionNum, msg, discard_time
+	// returns a SessionState to be saved onto this server
+	private SessionState unpackWriteRequest(byte [] buffer) {
+		return null;
+	}
 	
 }
