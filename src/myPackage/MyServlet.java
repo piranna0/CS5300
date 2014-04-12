@@ -1,6 +1,7 @@
 package myPackage;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -34,6 +35,8 @@ public class MyServlet extends HttpServlet
 	private final int expiry = 10;
 	private final String location = "0";
 	private static AtomicInteger callId = new AtomicInteger();
+	private final byte SESSIONREAD = 0; // operation code
+	private final byte SESSIONWRITE = 1; // operation code
 	
 	private Thread daemonThread;
 	private boolean threadStarted = false;
@@ -385,32 +388,63 @@ public class MyServlet extends HttpServlet
 		return addr;
 	}
 	
-	// sessionRead, sent by this server to another
-	// returns a packet containing the message
-	private DatagramPacket sessionRead(
-			int sessNum, int serverId , int sessionVersionNum, 
-			InetAddress address, int port) {
-		//TODO
+	// sessionRead, sentlength by this server to another
+	// give an array of addresses and ports to send to (returns the first result)
+	// returns a String containing the message (if null, error was encountered)
+	private String sessionRead(
+			int sessNum, int serverId , int sessVersionNum, 
+			InetAddress[] address, int[] port) {
 		try {
 			DatagramSocket rpcSocket = new DatagramSocket();
 			int newCallId = callId.getAndAdd(1);
-			ByteBuffer bbuf = ByteBuffer.allocate(4); //TODO: HOW MANY BYTES??
+
+			ByteBuffer bbuf = ByteBuffer.allocate(17); //4 ints + 1 byte
+			bbuf.putInt(newCallId);
+			bbuf.put(SESSIONREAD);
+			bbuf.putInt(sessNum);
+			bbuf.putInt(serverId);
+			bbuf.putInt(sessVersionNum);
 			byte[] outBuf = bbuf.array();
-            DatagramPacket recvPkt = null;
-            return recvPkt;
+			return sessionReadHelper(newCallId, rpcSocket, outBuf, address, port, 0);
 		} catch (SocketException e) {
-			// TODO Auto-generated catch block
+			// DatagramSocket could not be opened
 			e.printStackTrace();
 		}
         return null;
 	}
 	
+	private String sessionReadHelper(int cid, DatagramSocket socket, byte[] outBuf, InetAddress[] address, int[] port, int index) {
+		// failed on all calls
+		if (index > address.length || index > port.length) {
+			return null;
+		}
+		DatagramPacket sendPkt = new DatagramPacket(outBuf, outBuf.length, address[index], port[index]);
+		try {
+			socket.send(sendPkt);
+			byte[] inBuf = new byte[516]; // 512 + 4 //TODO restrict input to 256 characters
+			DatagramPacket recvPkt = new DatagramPacket(inBuf, inBuf.length);
+			ByteBuffer bbuf = null;
+			int recvCallId = -1;
+			do {
+				recvPkt.setLength(inBuf.length);
+				socket.receive(recvPkt);
+				bbuf = ByteBuffer.wrap(inBuf);
+				recvCallId = bbuf.getInt();
+			} while(recvCallId != cid);
+			return new String(inBuf, 4, recvPkt.getLength()-4);
+		} catch (IOException e) {
+			//send failed or timeout
+			e.printStackTrace();
+			return sessionReadHelper(cid, socket, outBuf, address, port, index+1);
+		}
+	}
+	
 	// sessionWrite, sent by this server to another server
-	// returns a packet (indicating success)
-	private DatagramPacket sessionWrite(
+	// returns whether the call was successful
+	private boolean sessionWrite(
 			int sessNum, int serverId, int sessionVersionNum, 
 			String msg, int discard_time, InetAddress address, int port) {
-		return null;
+		return false;
 	}
 	
 	// for the daemon thread:
