@@ -1,20 +1,16 @@
 package myPackage;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.Cookie;
@@ -388,8 +384,8 @@ public class MyServlet extends HttpServlet
 		return addr;
 	}
 	
-	// sessionRead, sentlength by this server to another
-	// give an array of addresses and ports to send to (returns the first result)
+	// sessionRead, sent by this server to multiple remote servers
+	// give an array of addresses and ports from which to read (returns the first result)
 	// returns a String containing the message (if null, error was encountered)
 	private String sessionRead(
 			int sessNum, int serverId , int sessVersionNum, 
@@ -439,12 +435,62 @@ public class MyServlet extends HttpServlet
 		}
 	}
 	
-	// sessionWrite, sent by this server to another server
+	// sessionWrite to one remote server
 	// returns whether the call was successful
 	private boolean sessionWrite(
-			int sessNum, int serverId, int sessionVersionNum, 
-			String msg, int discard_time, InetAddress address, int port) {
+			int sessNum, int serverId, int sessVersionNum, 
+			int discard_time, String msg, InetAddress address, int port) {
+        try {
+			DatagramSocket rpcSocket = new DatagramSocket();
+			int newCallId = callId.getAndAdd(1);
+
+			ByteBuffer bbuf = ByteBuffer.allocate(4*5 + 1 + 2*msg.length()); //5 ints + 1 byte + string
+			bbuf.putInt(newCallId);
+			bbuf.put(SESSIONWRITE);
+			bbuf.putInt(sessNum);
+			bbuf.putInt(serverId);
+			bbuf.putInt(sessVersionNum);
+			bbuf.putInt(discard_time);
+			for (byte b : msg.getBytes()) {
+				bbuf.put(b);
+			}
+			byte[] outBuf = bbuf.array();
+	        DatagramPacket sendPkt = new DatagramPacket(outBuf, outBuf.length, address, port);
+            rpcSocket.send(sendPkt);
+            byte[] inBuf = new byte[4]; // response contains callId
+            DatagramPacket recvPkt = new DatagramPacket(inBuf, inBuf.length);
+            int recvCallId = -1;
+            do { //loop through responses
+                recvPkt.setLength(inBuf.length);
+                rpcSocket.receive(recvPkt);
+                bbuf = ByteBuffer.wrap(inBuf);
+                recvCallId = bbuf.getInt();
+            } while(recvCallId != newCallId);
+        return true;
+		} catch (SocketException e) {
+			// DatagramSocket could not be opened
+			e.printStackTrace();
+        } catch (IOException e) {
+            //send failed or timeout
+            e.printStackTrace();
+        }
 		return false;
+	}
+	
+	// to be called in the MyServlet constructor
+	private void rpcServer() {
+		daemonThread = new Thread(new Runnable() {
+			@Override
+			public void run()
+			{
+				while(true)
+				{
+					// TODO: RPC SERVER
+				}
+			}
+		});
+		daemonThread.setDaemon(true);	// making this thread daemon
+	    daemonThread.start();
 	}
 	
 	// for the daemon thread:
@@ -464,7 +510,7 @@ public class MyServlet extends HttpServlet
 	
 	// unpackage the write request byte array (for the rpc handler thread)
 	// byte array contains:
-	// callId, operationCode, sessionNum, serverId, sessionVersionNum, msg, discard_time
+	// callId, operationCode, sessionNum, serverId, sessionVersionNum, discard_time, msg
 	// returns a SessionState to be saved onto this server
 	private SessionState unpackWriteRequest(byte [] buffer) {
 		return null;
