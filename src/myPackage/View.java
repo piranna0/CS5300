@@ -7,6 +7,35 @@ import java.util.Random;
 
 public class View {
 	private HashSet<String> view;
+	
+//	public static void main(String[] args){
+//		View v = new View();
+//		System.out.println(choose(v));
+//		insert(v, "1.1.1.1");
+//		insert(v, "1.1.1.2");
+//		insert(v, "1.1.1.3");
+//		insert(v, "1.1.1.4");
+//		System.out.println(choose(v));
+//		
+//		remove(v, "1.1.1.2");
+//		System.out.println(v.view);
+//		
+//		View v2 = new View();
+//		insert(v2, "1.1.1.3");
+//		insert(v2, "1.1.1.4");
+//		insert(v2, "1.1.1.5");
+//		
+//		union(v, v2);
+//		System.out.println(v.view);
+//		System.out.println(v2.view);
+//		
+//		shrink(v,2);
+//		shrink(v2,1);
+//		
+//		System.out.println(v.view);
+//		System.out.println(v2.view);
+//	}
+	
 	public View(){
 		view = new HashSet<String>();
 	}
@@ -33,6 +62,9 @@ public class View {
 	
 	public static String choose(View v){
 		Object[] arr = v.view.toArray();
+		if(arr.length == 0){
+			return null;
+		}
 		Random r = new Random();
 		int index = r.nextInt(arr.length);
 		return (String) arr[index];
@@ -40,5 +72,15 @@ public class View {
 	
 	public static void union(View v, View w){
 		v.view.addAll(w.view);
+	}
+	
+	public static View copy(View v){
+		View ret = new View();
+		union(ret, v);
+		return ret;
+	}
+	
+	public static HashSet<String> getIPs(View v){
+		return v.view;
 	}
 }

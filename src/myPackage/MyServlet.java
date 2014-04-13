@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 public class MyServlet extends HttpServlet 
 {
 	private static final long serialVersionUID = 1L;
+	private static final int ViewSz = 5;
 	private static AtomicInteger sessionID = new AtomicInteger();
 	private String cookieName = "CS5300PROJ1SESSION";
 	public static int SESSION_TIMEOUT_SECS = 15;
@@ -36,6 +37,7 @@ public class MyServlet extends HttpServlet
 	private final byte SESSIONREAD = 0; // operation code
 	private final byte SESSIONWRITE = 1; // operation code
 	private final int PORT = 5300;
+	private String SvrID;
 	
 	private View view = new View();
 	
@@ -53,7 +55,6 @@ public class MyServlet extends HttpServlet
 			{
 				while(true)
 				{
-//					List<Integer> list = new ArrayList<Integer>(map.keySet());
 					System.out.println("gc:" + map.keySet().size() + " session(s)");
 					for (SessionTuple tup : map.keySet())
 					{
@@ -82,6 +83,13 @@ public class MyServlet extends HttpServlet
      */
     public MyServlet() {
         super();
+
+        try {
+			SvrID = InetAddress.getLocalHost().getHostAddress();
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
         
         garbageCollector();   
     }
@@ -159,11 +167,35 @@ public class MyServlet extends HttpServlet
 					long curTime = System.currentTimeMillis() / 1000;
 					timeout = curTime + SESSION_TIMEOUT_SECS;
 					loc[0] = getIP().getHostAddress();
-					// choose a backup server
-					// TODO: call SessionWrite() to backup server and wait for successful response
-					// if (fail) { loc[1] = null; }
-					// else { loc[1] = // TODO: backup server - choose at random from local server's view }
-					loc[1] = getLoc(myCookie)[1];
+					
+					// choose a backup server from view and call SessionWrite()
+					// TODO: debug dis
+					boolean reply = false;
+					View myCopy = View.copy(view);
+					while (reply == false)
+					{
+						String backup_ip = View.choose(myCopy);
+						if (backup_ip == null) 
+						{
+							// nothing's in view
+							loc[1] = null;
+							break;
+						}
+						else 
+						{
+							reply = sessionWrite(sid, sess[1].getBytes(), ver, message, InetAddress.getByAddress(backup_ip.getBytes()));
+							if (reply == true)
+							{
+								loc[1] = backup_ip;
+								break;
+							}
+							else
+							{
+								// remove the invalid ip from view
+								View.remove(myCopy, backup_ip);
+							}
+						}
+					}
 					value = concatValue(sess, ver, loc);
 					
 					// store updated info to map (choose primary server)
@@ -218,11 +250,35 @@ public class MyServlet extends HttpServlet
 					long curTime = System.currentTimeMillis() / 1000;
 					timeout = curTime + SESSION_TIMEOUT_SECS;
 					loc[0] = getIP().getHostAddress();
-					// choose a backup server
-					// TODO: call SessionWrite() to backup server and wait for successful response
-					// if (fail) { loc[1] = null; }
-					// else { loc[1] = // TODO: backup server - choose at random from local server's view }
-					loc[1] = getLoc(myCookie)[1];
+					
+					// choose a backup server from view and call SessionWrite()
+					// TODO: debug dis
+					boolean rep = false;
+					View myCopy = View.copy(view);
+					while (rep == false)
+					{
+						String backup_ip = View.choose(myCopy);
+						if (backup_ip == null) 
+						{
+							// nothing's in view
+							loc[1] = null;
+							break;
+						}
+						else 
+						{
+							rep = sessionWrite(sessNum, servNum, ver, message, InetAddress.getByAddress(backup_ip.getBytes()));
+							if (rep == true)
+							{
+								loc[1] = backup_ip;
+								break;
+							}
+							else
+							{
+								// remove the invalid ip from view
+								View.remove(myCopy, backup_ip);
+							}
+						}
+					}
 					value = concatValue(sess, ver, loc);
 					
 					// store updated info to map (choose primary server)
@@ -262,7 +318,6 @@ public class MyServlet extends HttpServlet
 		// in the case of time-out, redirect to time-out page
 		if (myCookie == null)
 		{
-			java.util.Set<SessionTuple> blah2 = map.keySet();
 			request.getRequestDispatcher("/timeout.jsp").forward(request, response);
 			return;
 		}
@@ -458,7 +513,7 @@ public class MyServlet extends HttpServlet
 		
 		try 
 		{
-			addr = InetAddress.getByName(InetAddress.getLocalHost().getHostAddress());
+			addr = InetAddress.getByName(SvrID);
 		} 
 		catch (UnknownHostException e) 
 		{
@@ -635,6 +690,40 @@ public class MyServlet extends HttpServlet
 	
 	private byte[] inetaddrToArray(InetAddress addr) {
 		return addr.getAddress();
+	}
+	
+	//Basic view rules
+	public void RPCtimeout(InetAddress addr){
+		String ipAddress = addr.getHostAddress();
+		View.remove(view, ipAddress);
+	}
+	
+	public void RPCReceive(InetAddress addr){
+		String ipAddress = addr.getHostAddress();
+		View.insert(view, ipAddress);
+	}
+	
+	//Gossip Protocol Method
+	public void gossip(InetAddress addr){
+//		TODO: Need RPC call for GetView written
+//		View temp = GetView(addr);
+		View temp = new View();
+		View.union(temp, view);
+		View.remove(temp, SvrID);
+		View.shrink(temp, ViewSz);
+		view = temp;
+	}
+	
+	//Bootstrap method
+	public void bootstrap(){
+		View temp = ViewDB.readSDBView();
+		View.remove(temp, SvrID);
+		View.union(temp, view);
+		View.shrink(temp, ViewSz);
+		view = View.copy(temp);
+		View.insert(temp, SvrID);
+		View.shrink(temp, ViewSz);
+		ViewDB.writeSDBView(temp);
 	}
 	
 }
