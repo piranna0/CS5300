@@ -1024,22 +1024,28 @@ public class MyServlet extends HttpServlet
 					while (temp == null)
 					{
 						String ip = View.choose(view);
-						if (ip == null) 
-						{
-							// nothing's in view
-							temp = new View();
-							System.out.println("GOSSIP BREAK");
-							break;
-						}
-						else
-						{
-							//		TODO: Need RPC call for GetView written
-							try {
-								temp = getView(InetAddress.getByAddress(ip.getBytes()));
-							} catch (UnknownHostException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
+						try {
+							if (ip.equals(inetaddrToString(InetAddress.getByName("0.0.0.0")))) 
+							{
+								// nothing's in view
+								temp = new View();
+								System.out.println("GOSSIP BREAK");
+								break;
 							}
+							else
+							{
+								//		TODO: Need RPC call for GetView written
+								try {
+									System.out.println("GOSSIP: " + InetAddress.getByAddress(ip.getBytes()));
+									temp = getView(InetAddress.getByAddress(ip.getBytes()));
+								} catch (UnknownHostException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+							}
+						} catch (UnknownHostException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
 						}
 					}
 					System.out.println("Gossip temp: " + temp);
