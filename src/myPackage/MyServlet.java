@@ -96,7 +96,9 @@ public class MyServlet extends HttpServlet
 			e.printStackTrace();
 		}
 
-		garbageCollector();   
+		garbageCollector(); 
+		bootstrap();
+		gossip();
 	}
 
 	/**
@@ -862,18 +864,34 @@ public class MyServlet extends HttpServlet
 	}
 
 	//Gossip Protocol Method
-	public void gossip(InetAddress addr){
+	public void gossip(){
 		Thread daemonThread = new Thread(new Runnable()
 		{
 			@Override
 			public void run()
 			{
 				Random generator = new Random();
+				View temp;
 				while(true)
 				{
-					//		TODO: Need RPC call for GetView written
-					//		View temp = GetView(addr);
-					View temp = new View();
+					temp = null;
+					while (temp == null)
+					{
+						String ip = View.choose(view);
+						if (ip == null) 
+						{
+							// nothing's in view
+							temp = new View();
+							break;
+						}
+						else
+						{
+							//		TODO: Need RPC call for GetView written
+							//		View temp = GetView(addr);
+						}
+					}
+
+					temp = new View();
 					View.union(temp, view);
 					View.remove(temp, SvrID);
 					View.shrink(temp, ViewSz);
