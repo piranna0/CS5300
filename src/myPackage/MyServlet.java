@@ -6,6 +6,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
@@ -42,6 +43,7 @@ public class MyServlet extends HttpServlet
 	private final byte GETVIEW = 2; //operation code
 	private final int PORT = 5300;
 	private String SvrID;
+	private static int TIMEOUT = 100;
 
 	private static int GOSSIP_MSECS = 12000;
 	private static int BOOTSTRAP_MSECS = 12000;
@@ -746,6 +748,7 @@ public class MyServlet extends HttpServlet
 			InetAddress[] address) {
 		try {
 			DatagramSocket rpcSocket = new DatagramSocket();
+			rpcSocket.setSoTimeout(TIMEOUT);
 			int newCallId = callId.getAndAdd(1);
 
 			ByteBuffer bbuf = ByteBuffer.allocate(17); //4 ints + 1 byte
@@ -790,7 +793,11 @@ public class MyServlet extends HttpServlet
 			} else {
 				return null;
 			}
-		} catch (IOException e) {
+		} catch (SocketTimeoutException e){
+			e.printStackTrace();
+			RPCtimeout(address[index]);
+			return sessionReadHelper(cid, socket, outBuf, address, index+1);
+		}catch (IOException e) {
 			//send failed or timeout
 			e.printStackTrace();
 			RPCtimeout(address[index]);
@@ -805,6 +812,7 @@ public class MyServlet extends HttpServlet
 			String msg, InetAddress address) {
 		try {
 			DatagramSocket rpcSocket = new DatagramSocket();
+			rpcSocket.setSoTimeout(TIMEOUT);
 			int newCallId = callId.getAndAdd(1);
 
 			ByteBuffer bbuf = ByteBuffer.allocate(4*4 + 8 + 1 + 2*msg.length()); //5 ints + 1 byte + string
@@ -836,6 +844,9 @@ public class MyServlet extends HttpServlet
 		} catch (SocketException e) {
 			// DatagramSocket could not be opened
 			e.printStackTrace();
+		} catch (SocketTimeoutException e){
+			RPCtimeout(address);
+//			e.printStackTrace();
 		} catch (IOException e) {
 			//send failed or timeout
 			RPCtimeout(address);
@@ -873,7 +884,10 @@ public class MyServlet extends HttpServlet
 		} catch (SocketException e) {
 			// DatagramSocket could not be opened
 			e.printStackTrace();
-		} catch (IOException e) {
+		} catch (SocketTimeoutException e){
+//			e.printStackTrace();
+			RPCtimeout(address);
+		}catch (IOException e) {
 			//send failed or timeout
 			RPCtimeout(address);
 			e.printStackTrace();
