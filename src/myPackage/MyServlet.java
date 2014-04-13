@@ -868,6 +868,7 @@ public class MyServlet extends HttpServlet
 	private View getView(InetAddress address) {
         try {
 			DatagramSocket rpcSocket = new DatagramSocket();
+			rpcSocket.setSoTimeout(TIMEOUT);
 			int newCallId = callId.getAndAdd(1);
 
 			ByteBuffer bbuf = ByteBuffer.allocate(4 + 1);
