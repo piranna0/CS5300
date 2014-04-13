@@ -61,15 +61,15 @@ public class MyServlet extends HttpServlet
 			{
 				while(true)
 				{
-					//					System.out.println("gc:" + map.keySet().size() + " session(s)");
+//                    System.out.println("gc:" + map.keySet().size() + " session(s)");
 					for (SessionTuple tup : map.keySet())
 					{
 						SessionState state = map.get(tup);
-						//						System.out.println("gc:" + tup.serverId + "/" + tup.sessionNum + " has " + (state.timeout - (int)(System.currentTimeMillis()/1000)) + " seconds left");
+//                        System.out.println("gc:" + convertToReadableIP(tup.serverId) + "/" + tup.sessionNum + " has " + (state.timeout - (int)(System.currentTimeMillis()/1000)) + " seconds left");
 						if (state.timeout < (int)(System.currentTimeMillis()/1000))
 						{
 							SessionState s = map.remove(tup);
-							System.out.println("gc:removed <" + tup.serverId + "/" + tup.sessionNum + ", " + s.sessionID.serverId + ">");
+							System.out.println("gc:removed <" + convertToReadableIP(tup.serverId) + "/" + tup.sessionNum + ", " + convertToReadableIP(s.sessionID.serverId) + ">");
 						}
 					}
 					try {
@@ -173,7 +173,7 @@ public class MyServlet extends HttpServlet
 			response.addCookie(c);
 
 			// forward information to jsp page
-			request.setAttribute("myVal", URLDecoder.decode(c.getValue(),"UTF-8"));
+			request.setAttribute("myVal", concatPrint(sess, ver, loc));
 			request.setAttribute("myMessage", c.getComment());
 			request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
 
@@ -244,7 +244,7 @@ public class MyServlet extends HttpServlet
 					response.addCookie(c);
 
 					// forward information to jsp page
-					request.setAttribute("myVal", URLDecoder.decode(c.getValue(),"UTF-8"));
+					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
 					request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
 
@@ -331,7 +331,7 @@ public class MyServlet extends HttpServlet
 					response.addCookie(c);
 
 					// forward information to jsp page
-					request.setAttribute("myVal", URLDecoder.decode(c.getValue(),"UTF-8"));
+					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
 					request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
 				}
@@ -477,7 +477,7 @@ public class MyServlet extends HttpServlet
 					response.addCookie(c);
 
 					// forward information to jsp page
-					request.setAttribute("myVal", URLDecoder.decode(c.getValue(),"UTF-8"));
+					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
 					request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
 				}
@@ -578,7 +578,7 @@ public class MyServlet extends HttpServlet
 			response.addCookie(c);
 
 			// forward information to jsp page
-			request.setAttribute("myVal", URLDecoder.decode(c.getValue(),"UTF-8"));
+			request.setAttribute("myVal", concatPrint(sess, ver, loc));
 			request.setAttribute("myMessage", c.getComment());
 			request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
 		}
@@ -635,7 +635,7 @@ public class MyServlet extends HttpServlet
 			}
 			String[] tokens = val.split("_");
 
-			return String.valueOf(tokens[1]);
+			return tokens[1];
 		}
 		else 
 			return null;
@@ -688,6 +688,12 @@ public class MyServlet extends HttpServlet
 		return sess[0] + "_" + sess[1] + "_" + 
 				String.valueOf(ver) + "_" + 
 				loc[0] + "_" + loc[1];
+	}
+	
+	private String concatPrint(String[] sess, int ver, String[] loc) {
+		return sess[0] + "_" + convertToReadableIP(sess[1]) + "_" + 
+				String.valueOf(ver) + "_" + 
+				convertToReadableIP(loc[0]) + "_" + convertToReadableIP(loc[1]);
 	}
 
 	// running on local tomcat
@@ -1028,7 +1034,7 @@ public class MyServlet extends HttpServlet
 	
 	private String convertToReadableIP(String addr) {
 		byte[] bytes = addr.getBytes();
-		InetAddress a;
+		InetAddress a = null;
 		try {
 			a = InetAddress.getByAddress(bytes);
 		} catch (UnknownHostException e) {
