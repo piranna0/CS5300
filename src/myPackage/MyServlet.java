@@ -37,7 +37,7 @@ public class MyServlet extends HttpServlet
 	private final byte SESSIONWRITE = 1; // operation code
 	private final int PORT = 5300;
 	
-	private static View view = new View();
+	private View view = new View();
 	
 	// Session State table, aka hash map used to store session information
 	// K: sessionID, V: SessionState
