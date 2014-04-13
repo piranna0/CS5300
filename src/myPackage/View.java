@@ -33,6 +33,9 @@ public class View {
 	
 	public static String choose(View v){
 		Object[] arr = v.view.toArray();
+		if(arr.length == 0){
+			return null;
+		}
 		Random r = new Random();
 		int index = r.nextInt(arr.length);
 		return (String) arr[index];
@@ -40,5 +43,17 @@ public class View {
 	
 	public static void union(View v, View w){
 		v.view.addAll(w.view);
+	}
+	
+	public static View copy(View v){
+		View ret = new View();
+		for(String s : v.view){
+			ret.view.add(s);
+		}
+		return ret;
+	}
+	
+	public static HashSet<String> getIPs(View v){
+		return v.view;
 	}
 }

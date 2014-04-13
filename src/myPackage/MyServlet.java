@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 public class MyServlet extends HttpServlet 
 {
 	private static final long serialVersionUID = 1L;
+	private static final int ViewSz = 5;
 	private static AtomicInteger sessionID = new AtomicInteger();
 	private String cookieName = "CS5300PROJ1SESSION";
 	public static int SESSION_TIMEOUT_SECS = 15;
@@ -36,12 +37,13 @@ public class MyServlet extends HttpServlet
 	private final byte SESSIONREAD = 0; // operation code
 	private final byte SESSIONWRITE = 1; // operation code
 	private final int PORT = 5300;
+	private String SvrID;
 	
 	private View view = new View();
 	
 	// Session State table, aka hash map used to store session information
 	// K: sessionID, V: SessionState
-	private ConcurrentHashMap<Integer, SessionState> map = new ConcurrentHashMap<Integer, SessionState>();
+	private ConcurrentHashMap<SessionTuple, SessionState> map = new ConcurrentHashMap<SessionTuple, SessionState>();
 	
 	// spawns the garbage collector daemon thread
 	public void garbageCollector()
@@ -53,15 +55,15 @@ public class MyServlet extends HttpServlet
 			{
 				while(true)
 				{
-					List<Integer> list = new ArrayList<Integer>(map.keySet());
-					System.out.println("gc:" + list.size() + " session(s)");
-					for (int id : list)
+					System.out.println("gc:" + map.keySet().size() + " session(s)");
+					for (SessionTuple tup : map.keySet())
 					{
-						System.out.println("gc:" + id + " has " + (map.get(id).timeout - (int)(System.currentTimeMillis()/1000)) + " seconds left");
-						if (map.get(id).timeout < (int)(System.currentTimeMillis()/1000))
+						SessionState state = map.get(tup);
+						System.out.println("gc:" + tup.serverId + "/" + tup.sessionNum + " has " + (state.timeout - (int)(System.currentTimeMillis()/1000)) + " seconds left");
+						if (state.timeout < (int)(System.currentTimeMillis()/1000))
 						{
-							SessionState s = map.remove(id);
-							System.out.println("gc:removed <" + id + ", " + s.sessionID.serverId + ">");
+							SessionState s = map.remove(tup);
+							System.out.println("gc:removed <" + tup.serverId + "/" + tup.sessionNum + ", " + s.sessionID.serverId + ">");
 						}
 					}
 					try {
@@ -81,8 +83,15 @@ public class MyServlet extends HttpServlet
      */
     public MyServlet() {
         super();
+
+        try {
+			SvrID = InetAddress.getLocalHost().getHostAddress();
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
         
-        garbageCollector();
+        garbageCollector();   
     }
 
 	/**
@@ -119,7 +128,7 @@ public class MyServlet extends HttpServlet
 			// store new info to map
 			SessionTuple sessTup = new SessionTuple(sid, loc[0]);
 			SessionState state = new SessionState(sessTup, ver, message, timeout);
-			map.put(Integer.valueOf(sess[0]), state);
+			map.put(sessTup, state);
 			
 			// construct cookie
 			c = new Cookie(cookieName, value);
@@ -192,7 +201,7 @@ public class MyServlet extends HttpServlet
 					// store updated info to map (choose primary server)
 					SessionTuple sessTup = new SessionTuple(sid, loc[0]);
 					SessionState state = new SessionState(sessTup, ver, message, timeout);
-					map.replace(Integer.valueOf(sess[0]), state);
+					map.replace(sessTup, state);
 					
 					// kill current cookie
 					myCookie.setMaxAge(0);
@@ -275,7 +284,7 @@ public class MyServlet extends HttpServlet
 					// store updated info to map (choose primary server)
 					SessionTuple sessTup = new SessionTuple(Integer.valueOf(sess[0]), loc[0]);
 					SessionState state = new SessionState(sessTup, ver, message, timeout);
-					map.put(Integer.valueOf(sess[0]), state);
+					map.put(sessTup, state);
 					
 					// kill current cookie
 					myCookie.setMaxAge(0);
@@ -370,7 +379,7 @@ public class MyServlet extends HttpServlet
 					// store updated info to map (choose primary server)
 					SessionTuple sessTup = new SessionTuple(sid, loc[0]);
 					SessionState state = new SessionState(sessTup, ver, msg, timeout);
-					map.replace(Integer.valueOf(sess[0]), state);
+					map.replace(sessTup, state);
 					
 					// kill current cookie
 					myCookie.setMaxAge(0);
@@ -504,7 +513,7 @@ public class MyServlet extends HttpServlet
 		
 		try 
 		{
-			addr = InetAddress.getByName(InetAddress.getLocalHost().getHostAddress());
+			addr = InetAddress.getByName(SvrID);
 		} 
 		catch (UnknownHostException e) 
 		{
@@ -570,7 +579,7 @@ public class MyServlet extends HttpServlet
 	// returns whether the call was successful
 	private boolean sessionWrite(
 			int sessNum, byte[] serverId, int sessVersionNum, 
-			int discard_time, String msg, InetAddress address) {
+			String msg, InetAddress address) {
         try {
 			DatagramSocket rpcSocket = new DatagramSocket();
 			int newCallId = callId.getAndAdd(1);
@@ -580,8 +589,11 @@ public class MyServlet extends HttpServlet
 			bbuf.put(SESSIONWRITE);
 			bbuf.putInt(sessNum);
 			//bbuf.putInt(serverId);		//TODO
+			for (byte b : serverId) {
+				bbuf.put(b);
+			}
 			bbuf.putInt(sessVersionNum);
-			bbuf.putInt(discard_time);
+			bbuf.putInt((int)(System.currentTimeMillis()/1000) + DISCARD_TIME_DELTA + SESSION_TIMEOUT_SECS);
 			for (byte b : msg.getBytes()) {
 				bbuf.put(b);
 			}
@@ -665,6 +677,40 @@ public class MyServlet extends HttpServlet
 	// sessionNum, serverId, sessionVersionNum
 	private int[] unpackReadRequest(byte[] buffer) {
 		return null;
+	}
+	
+	//Basic view rules
+	public void RPCtimeout(InetAddress addr){
+		String ipAddress = addr.getHostAddress();
+		View.remove(view, ipAddress);
+	}
+	
+	public void RPCReceive(InetAddress addr){
+		String ipAddress = addr.getHostAddress();
+		View.insert(view, ipAddress);
+	}
+	
+	//Gossip Protocol Method
+	public void gossip(InetAddress addr){
+//		TODO: Need RPC call for GetView written
+//		View temp = GetView(addr);
+		View temp = new View();
+		View.union(temp, view);
+		View.remove(temp, SvrID);
+		View.shrink(temp, ViewSz);
+		view = temp;
+	}
+	
+	//Bootstrap method
+	public void bootstrap(){
+		View temp = ViewDB.readSDBView();
+		View.remove(temp, SvrID);
+		View.union(temp, view);
+		View.shrink(temp, ViewSz);
+		view = View.copy(temp);
+		View.insert(temp, SvrID);
+		View.shrink(temp, ViewSz);
+		ViewDB.writeSDBView(temp);
 	}
 	
 }
