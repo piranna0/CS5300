@@ -43,7 +43,7 @@ public class MyServlet extends HttpServlet
 	private final byte GETVIEW = 2; //operation code
 	private final int PORT = 5300;
 	private String SvrID;
-	private static int TIMEOUT = 100;
+	private static int TIMEOUT = 500;
 
 	private static int GOSSIP_MSECS = 12000;
 	private static int BOOTSTRAP_MSECS = 12000;
@@ -840,6 +840,7 @@ public class MyServlet extends HttpServlet
 				bbuf = ByteBuffer.wrap(inBuf);
 				recvCallId = bbuf.getInt();
 			} while(recvCallId != newCallId);
+			rpcSocket.close();
 			return true;
 		} catch (SocketException e) {
 			// DatagramSocket could not be opened
@@ -880,6 +881,7 @@ public class MyServlet extends HttpServlet
 			for (int i = 4; i<recvPkt.getLength()-4; i+=4) {
 				View.insert(recvView, new String(inBuf, i, 4));
 			}
+			rpcSocket.close();
 			return recvView;
 		} catch (SocketException e) {
 			// DatagramSocket could not be opened
@@ -1064,6 +1066,7 @@ public class MyServlet extends HttpServlet
 					View.union(temp, view);
 					View.shrink(temp, ViewSz);
 					view = View.copy(temp);
+					System.out.println("BootStrap view2: " + view);
 					View.insert(temp, SvrID);
 					View.shrink(temp, ViewSz);
 					ViewDB.writeSDBView(temp, ViewSz);
