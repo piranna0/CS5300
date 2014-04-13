@@ -1,6 +1,8 @@
 package myPackage;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -38,17 +40,17 @@ public class ViewDB {
 		}
 		
 		
-		View v = new View();
-		HashSet<String> arr = new HashSet<String>();
-		View.insert(v, "1.1.1.1");
-		View.insert(v, "1.1.1.2");
-		writeSDBView(v);
-		try {
-			Thread.sleep(3000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+//		View v = new View();
+//		HashSet<String> arr = new HashSet<String>();
+//		View.insert(v, "1.1.1.1");
+//		View.insert(v, "1.1.1.2");
+//		writeSDBView(v);
+//		try {
+//			Thread.sleep(3000);
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		readSDBView();
 	}
 	
@@ -81,11 +83,26 @@ public class ViewDB {
 			for(Attribute attr : item.getAttributes()){
 				if(attr.getName().equals(IPAttribute)){
 					View.insert(v, attr.getValue());
+//					System.out.println("attr: " + convertToReadableIP(attr.getValue()));
 					break;
 				}
 			}
 		}
 		return v;
+	}
+	
+	//For testing readSDBView only
+	private static String convertToReadableIP(String addr) {
+		byte[] bytes = addr.getBytes();
+		InetAddress a;
+		try {
+			a = InetAddress.getByAddress(bytes);
+			return a.getHostAddress();
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
 	}
 	
 	//Takes two parameters:

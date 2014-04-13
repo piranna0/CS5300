@@ -980,7 +980,12 @@ public class MyServlet extends HttpServlet
 						else
 						{
 							//		TODO: Need RPC call for GetView written
-							//		View temp = GetView(addr);
+							try {
+								temp = getView(InetAddress.getByName(ip));
+							} catch (UnknownHostException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
 						}
 					}
 					View.union(temp, view);
