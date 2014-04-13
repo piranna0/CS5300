@@ -85,7 +85,7 @@ public class MyServlet extends HttpServlet
         super();
 
         try {
-			SvrID = InetAddress.getLocalHost().getHostAddress();
+			SvrID = inetaddrToString(InetAddress.getLocalHost());
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -116,12 +116,12 @@ public class MyServlet extends HttpServlet
 		{
 			int sid = sessionID.getAndAdd(1);
 			sess[0] = String.valueOf(sid);
-			sess[1] = local_ip.getHostAddress();
+			sess[1] = inetaddrToString(local_ip);
 			ver = 1;
 			message = "Hello, User!";
 			long curTime = System.currentTimeMillis() / 1000;
 			timeout = curTime + SESSION_TIMEOUT_SECS;
-			loc[0] = getIP().getHostAddress();
+			loc[0] = SvrID;
 			loc[1] = location;				// TODO: choose random server from local server's View
 			value = concatValue(sess, ver, loc);
 			
@@ -153,7 +153,7 @@ public class MyServlet extends HttpServlet
 			for (String s : locs)
 			{
 				// if the SessionState is stored in local server, simply reconstruct cookie and update it
-				if (!flag && (local_ip.getHostAddress()).equals(s))
+				if (!flag && (SvrID).equals(s))
 				{
 					int sid = getID(myCookie);
 					sess[0] = String.valueOf(sid);
@@ -166,7 +166,7 @@ public class MyServlet extends HttpServlet
 					message = ss.message;
 					long curTime = System.currentTimeMillis() / 1000;
 					timeout = curTime + SESSION_TIMEOUT_SECS;
-					loc[0] = getIP().getHostAddress();
+					loc[0] = SvrID;
 					
 					// choose a backup server from view and call SessionWrite()
 					// TODO: debug dis
@@ -249,7 +249,7 @@ public class MyServlet extends HttpServlet
 					message = reply;
 					long curTime = System.currentTimeMillis() / 1000;
 					timeout = curTime + SESSION_TIMEOUT_SECS;
-					loc[0] = getIP().getHostAddress();
+					loc[0] = SvrID;
 					
 					// choose a backup server from view and call SessionWrite()
 					// TODO: debug dis
@@ -333,7 +333,6 @@ public class MyServlet extends HttpServlet
 		String msg = "";
 		String value = "";
 		Cookie c;
-		InetAddress local_ip = getIP();
 		
 		// check if SessionState is stored in local server
 		// i.e. check server_primary or server_backup == server_local
@@ -342,7 +341,7 @@ public class MyServlet extends HttpServlet
 		for (String s : locs)
 		{
 			// if the SessionState is stored in local server, simply reconstruct cookie and update it
-			if (!flag && (local_ip.getHostAddress()).equals(s))
+			if (!flag && (SvrID).equals(s))
 			{
 				// replace and refresh buttons
 				if (!action.equals("logout"))
@@ -368,7 +367,7 @@ public class MyServlet extends HttpServlet
 					msg = message;
 					long curTime = System.currentTimeMillis() / 1000;
 					timeout = curTime + SESSION_TIMEOUT_SECS;
-					loc[0] = getIP().getHostAddress();
+					loc[0] = SvrID;
 					// choose a backup server
 					// TODO: call SessionWrite() to backup server and wait for successful response
 					// if (fail) { loc[1] = null; }
@@ -513,7 +512,7 @@ public class MyServlet extends HttpServlet
 		
 		try 
 		{
-			addr = InetAddress.getByName(SvrID);
+			addr = InetAddress.getByAddress(SvrID.getBytes());
 		} 
 		catch (UnknownHostException e) 
 		{
@@ -688,18 +687,14 @@ public class MyServlet extends HttpServlet
 		return new String(addr.getAddress());
 	}
 	
-	private byte[] inetaddrToArray(InetAddress addr) {
-		return addr.getAddress();
-	}
-	
 	//Basic view rules
 	public void RPCtimeout(InetAddress addr){
-		String ipAddress = addr.getHostAddress();
+		String ipAddress = inetaddrToString(addr);
 		View.remove(view, ipAddress);
 	}
 	
 	public void RPCReceive(InetAddress addr){
-		String ipAddress = addr.getHostAddress();
+		String ipAddress = inetaddrToString(addr);
 		View.insert(view, ipAddress);
 	}
 	
