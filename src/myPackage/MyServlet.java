@@ -1025,5 +1025,17 @@ public class MyServlet extends HttpServlet
 		daemonThread.setDaemon(true);	// making this thread daemon
 		daemonThread.start();
 	}
+	
+	private String convertToReadableIP(String addr) {
+		byte[] bytes = addr.getBytes();
+		InetAddress a;
+		try {
+			a = InetAddress.getByAddress(bytes);
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return a.getHostAddress();
+	}
 
 }
