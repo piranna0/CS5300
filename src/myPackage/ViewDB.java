@@ -52,14 +52,32 @@ public class ViewDB {
 		readSDBView();
 	}
 	
+	public static void init(){
+		try {
+			sdb = new AmazonSimpleDBClient(new PropertiesCredentials(
+					ViewDB.class.getResourceAsStream("AwsCredentials.properties")));
+			System.out.println(sdb.listDomains());
+			
+			//If sdb doesn't exist somehow
+			if(!sdb.listDomains().getDomainNames().contains(myDomain)){
+				sdb.createDomain(new CreateDomainRequest(myDomain));
+			}
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	public static View readSDBView(){
 		String selectExpression = "select * from " + myDomain + " where Type = '" + serverType + "'";
 		SelectRequest req = new SelectRequest(selectExpression);
 		
 		View v = new View();
-		
+		SelectResult sr = sdb.select(req);
+		if(sr == null)return v;
 		//Get ip addresses stored in SimpleDB
-		for(Item item : sdb.select(req).getItems()){
+		for(Item item : sr.getItems()){
 			for(Attribute attr : item.getAttributes()){
 				if(attr.getName().equals(IPAttribute)){
 					View.insert(v, attr.getValue());

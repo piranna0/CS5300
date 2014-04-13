@@ -13,6 +13,7 @@ import java.net.UnknownHostException;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.Cookie;
@@ -95,6 +96,7 @@ public class MyServlet extends HttpServlet
 		}
 
 		garbageCollector(); 
+		ViewDB.init();
 		rpcServer();
 		bootstrap();
 		gossip();
