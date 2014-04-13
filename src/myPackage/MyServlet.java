@@ -266,6 +266,15 @@ public class MyServlet extends HttpServlet
 				String reply = sessionRead(sessNum, servNum, verNum, inetLocs);
 				if (reply == null)
 				{
+//					// send a dead cookie
+//					Cookie myDeadCookie = new Cookie(cookieName, "");
+//					myDeadCookie.setMaxAge(0);
+//					myDeadCookie.setValue(null);
+//					
+//					// send cookie back to client
+//					response.addCookie(myDeadCookie);
+					
+					// forward information to jsp page and display it
 			        request.getRequestDispatcher("/error.jsp").forward(request, response);
 				}
 				else
@@ -347,7 +356,17 @@ public class MyServlet extends HttpServlet
 		// in the case of time-out, redirect to time-out page
 		if (myCookie == null)
 		{
+//			// send a dead cookie
+//			Cookie myDeadCookie = new Cookie(cookieName, "");
+//			myDeadCookie.setMaxAge(0);
+//			myDeadCookie.setValue(null);
+//			
+//			// send cookie back to client
+//			response.addCookie(myDeadCookie);
+			
+			// forward information to jsp page and display it
 			request.getRequestDispatcher("/timeout.jsp").forward(request, response);
+			
 			return;
 		}
         
@@ -493,6 +512,15 @@ public class MyServlet extends HttpServlet
 				reply = sessionRead(sessNum, servNum, verNum, inetLocs);
 				if (reply == null)
 				{
+//					// send a dead cookie
+//					myCookie = new Cookie(cookieName, "");
+//					myCookie.setMaxAge(0);
+//					myCookie.setValue(null);
+//					
+//					// send cookie back to client
+//					response.addCookie(myCookie);
+					
+					// forward information to jsp page and display it
 			        request.getRequestDispatcher("/error.jsp").forward(request, response);
 			        return;
 				}
