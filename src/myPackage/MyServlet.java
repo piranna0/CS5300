@@ -43,7 +43,7 @@ public class MyServlet extends HttpServlet
 	
 	// Session State table, aka hash map used to store session information
 	// K: sessionID, V: SessionState
-	private ConcurrentHashMap<Integer, SessionState> map = new ConcurrentHashMap<Integer, SessionState>();
+	private ConcurrentHashMap<SessionTuple, SessionState> map = new ConcurrentHashMap<SessionTuple, SessionState>();
 	
 	// spawns the garbage collector daemon thread
 	public void garbageCollector()
@@ -55,15 +55,16 @@ public class MyServlet extends HttpServlet
 			{
 				while(true)
 				{
-					List<Integer> list = new ArrayList<Integer>(map.keySet());
-					System.out.println("gc:" + list.size() + " session(s)");
-					for (int id : list)
+//					List<Integer> list = new ArrayList<Integer>(map.keySet());
+					System.out.println("gc:" + map.keySet().size() + " session(s)");
+					for (SessionTuple tup : map.keySet())
 					{
-						System.out.println("gc:" + id + " has " + (map.get(id).timeout - (int)(System.currentTimeMillis()/1000)) + " seconds left");
-						if (map.get(id).timeout < (int)(System.currentTimeMillis()/1000))
+						SessionState state = map.get(tup);
+						System.out.println("gc:" + tup.serverId + "/" + tup.sessionNum + " has " + (state.timeout - (int)(System.currentTimeMillis()/1000)) + " seconds left");
+						if (state.timeout < (int)(System.currentTimeMillis()/1000))
 						{
-							SessionState s = map.remove(id);
-							System.out.println("gc:removed <" + id + ", " + s.sessionID.serverId + ">");
+							SessionState s = map.remove(tup);
+							System.out.println("gc:removed <" + tup.serverId + "/" + tup.sessionNum + ", " + s.sessionID.serverId + ">");
 						}
 					}
 					try {
@@ -126,7 +127,7 @@ public class MyServlet extends HttpServlet
 			// store new info to map
 			SessionTuple sessTup = new SessionTuple(sid, loc[0]);
 			SessionState state = new SessionState(sessTup, ver, message, timeout);
-			map.put(Integer.valueOf(sess[0]), state);
+			map.put(sessTup, state);
 			
 			// construct cookie
 			c = new Cookie(cookieName, value);
@@ -175,7 +176,7 @@ public class MyServlet extends HttpServlet
 					// store updated info to map (choose primary server)
 					SessionTuple sessTup = new SessionTuple(sid, loc[0]);
 					SessionState state = new SessionState(sessTup, ver, message, timeout);
-					map.replace(Integer.valueOf(sess[0]), state);
+					map.replace(sessTup, state);
 					
 					// kill current cookie
 					myCookie.setMaxAge(0);
@@ -234,7 +235,7 @@ public class MyServlet extends HttpServlet
 					// store updated info to map (choose primary server)
 					SessionTuple sessTup = new SessionTuple(Integer.valueOf(sess[0]), loc[0]);
 					SessionState state = new SessionState(sessTup, ver, message, timeout);
-					map.put(Integer.valueOf(sess[0]), state);
+					map.put(sessTup, state);
 					
 					// kill current cookie
 					myCookie.setMaxAge(0);
@@ -268,7 +269,7 @@ public class MyServlet extends HttpServlet
 		// in the case of time-out, redirect to time-out page
 		if (myCookie == null)
 		{
-			java.util.Set<Integer> blah2 = map.keySet();
+			java.util.Set<SessionTuple> blah2 = map.keySet();
 			request.getRequestDispatcher("/timeout.jsp").forward(request, response);
 			return;
 		}
@@ -330,7 +331,7 @@ public class MyServlet extends HttpServlet
 					// store updated info to map (choose primary server)
 					SessionTuple sessTup = new SessionTuple(sid, loc[0]);
 					SessionState state = new SessionState(sessTup, ver, msg, timeout);
-					map.replace(Integer.valueOf(sess[0]), state);
+					map.replace(sessTup, state);
 					
 					// kill current cookie
 					myCookie.setMaxAge(0);
@@ -530,7 +531,7 @@ public class MyServlet extends HttpServlet
 	// returns whether the call was successful
 	private boolean sessionWrite(
 			int sessNum, byte[] serverId, int sessVersionNum, 
-			int discard_time, String msg, InetAddress address) {
+			String msg, InetAddress address) {
         try {
 			DatagramSocket rpcSocket = new DatagramSocket();
 			int newCallId = callId.getAndAdd(1);
@@ -540,8 +541,11 @@ public class MyServlet extends HttpServlet
 			bbuf.put(SESSIONWRITE);
 			bbuf.putInt(sessNum);
 			//bbuf.putInt(serverId);		//TODO
+			for (byte b : serverId) {
+				bbuf.put(b);
+			}
 			bbuf.putInt(sessVersionNum);
-			bbuf.putInt(discard_time);
+			bbuf.putInt((int)(System.currentTimeMillis()/1000) + DISCARD_TIME_DELTA + SESSION_TIMEOUT_SECS);
 			for (byte b : msg.getBytes()) {
 				bbuf.put(b);
 			}
