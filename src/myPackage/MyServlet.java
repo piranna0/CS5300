@@ -1019,6 +1019,7 @@ public class MyServlet extends HttpServlet
 						{
 							// nothing's in view
 							temp = new View();
+							System.out.println("GOSSIP BREAK");
 							break;
 						}
 						else
