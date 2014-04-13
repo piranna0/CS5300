@@ -1,10 +1,13 @@
 package myPackage;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -55,11 +58,11 @@ public class MyServlet extends HttpServlet
 			{
 				while(true)
 				{
-					System.out.println("gc:" + map.keySet().size() + " session(s)");
+//					System.out.println("gc:" + map.keySet().size() + " session(s)");
 					for (SessionTuple tup : map.keySet())
 					{
 						SessionState state = map.get(tup);
-						System.out.println("gc:" + tup.serverId + "/" + tup.sessionNum + " has " + (state.timeout - (int)(System.currentTimeMillis()/1000)) + " seconds left");
+//						System.out.println("gc:" + tup.serverId + "/" + tup.sessionNum + " has " + (state.timeout - (int)(System.currentTimeMillis()/1000)) + " seconds left");
 						if (state.timeout < (int)(System.currentTimeMillis()/1000))
 						{
 							SessionState s = map.remove(tup);
@@ -121,8 +124,38 @@ public class MyServlet extends HttpServlet
 			message = "Hello, User!";
 			long curTime = System.currentTimeMillis() / 1000;
 			timeout = curTime + SESSION_TIMEOUT_SECS;
+
 			loc[0] = SvrID;
-			loc[1] = location;				// TODO: choose random server from local server's View
+			
+			// choose a backup server from view and call SessionWrite()
+			// TODO: debug dis
+			boolean reply = false;
+			View myCopy = View.copy(view);
+			while (reply == false)
+			{
+				String backup_ip = View.choose(myCopy);
+				if (backup_ip == null) 
+				{
+					// nothing's in view
+					loc[1] = null;
+					break;
+				}
+				else
+				{
+					reply = sessionWrite(sid, sess[1].getBytes(), ver, message, InetAddress.getByAddress(backup_ip.getBytes()));
+					if (reply == true)
+					{
+						loc[1] = backup_ip;
+						break;
+					}
+					else
+					{
+						// remove the invalid ip from view
+						View.remove(myCopy, backup_ip);
+					}
+				}
+			}
+
 			value = concatValue(sess, ver, loc);
 			
 			// store new info to map
@@ -131,7 +164,7 @@ public class MyServlet extends HttpServlet
 			map.put(sessTup, state);
 			
 			// construct cookie
-			c = new Cookie(cookieName, value);
+			c = new Cookie(cookieName, URLEncoder.encode(value,"UTF-8"));
 			c.setMaxAge(SESSION_TIMEOUT_SECS);	// set timeout!!!
 			c.setComment(message);
 			
@@ -139,7 +172,7 @@ public class MyServlet extends HttpServlet
 			response.addCookie(c);
 			
 			// forward information to jsp page
-			request.setAttribute("myVal", c.getValue());
+			request.setAttribute("myVal", URLDecoder.decode(c.getValue(),"UTF-8"));
 			request.setAttribute("myMessage", c.getComment());
 	        request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
 
@@ -158,7 +191,7 @@ public class MyServlet extends HttpServlet
 					int sid = getID(myCookie);
 					sess[0] = String.valueOf(sid);
 					sess[1] = getIP(myCookie);
-					SessionState ss = map.get(Integer.valueOf(sess[0]));
+					SessionState ss = map.get(new SessionTuple(sid, sess[1]));
 					if (ss == null)
 						throw new ServletException("Current session has timed out.");
 					ver = ss.version;
@@ -207,7 +240,7 @@ public class MyServlet extends HttpServlet
 					myCookie.setMaxAge(0);
 					myCookie.setValue(null);
 					// reconstruct cookie
-					c = new Cookie(cookieName, value);
+					c = new Cookie(cookieName, URLEncoder.encode(value,"UTF-8"));
 					c.setMaxAge(SESSION_TIMEOUT_SECS);		// set timeout!!!
 					c.setComment(message);
 					
@@ -215,7 +248,7 @@ public class MyServlet extends HttpServlet
 					response.addCookie(c);
 					
 					// forward information to jsp page
-					request.setAttribute("myVal", c.getValue());
+					request.setAttribute("myVal", URLDecoder.decode(c.getValue(),"UTF-8"));
 					request.setAttribute("myMessage", c.getComment());
 			        request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
 
@@ -290,7 +323,7 @@ public class MyServlet extends HttpServlet
 					myCookie.setMaxAge(0);
 					myCookie.setValue(null);
 					// reconstruct cookie
-					c = new Cookie(cookieName, value);
+					c = new Cookie(cookieName, URLEncoder.encode(value, "UTF-8"));
 					c.setMaxAge(SESSION_TIMEOUT_SECS);		// set timeout!!!
 					c.setComment(message);
 					
@@ -298,10 +331,11 @@ public class MyServlet extends HttpServlet
 					response.addCookie(c);
 					
 					// forward information to jsp page
-					request.setAttribute("myVal", c.getValue());
+					request.setAttribute("myVal", URLDecoder.decode(c.getValue(),"UTF-8"));
 					request.setAttribute("myMessage", c.getComment());
 			        request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
 				}
+				
 			}
 		}
 		
@@ -334,6 +368,26 @@ public class MyServlet extends HttpServlet
 		String value = "";
 		Cookie c;
 		
+		// logout button
+		if (action.equals("logout"))
+		{
+			// remove session info from map
+			SessionTuple sessTup = new SessionTuple(getID(myCookie), getIP(myCookie));
+			map.remove(sessTup);
+			
+			// kill the cookie
+			myCookie.setMaxAge(0);
+			myCookie.setValue(null);
+			
+			// send cookie back to client
+			response.addCookie(myCookie);
+			
+			// forward information to jsp page and display it
+	        request.getRequestDispatcher("/logout.jsp").forward(request, response);
+	        
+	        return;
+		}
+		
 		// check if SessionState is stored in local server
 		// i.e. check server_primary or server_backup == server_local
 		String[] locs = getLoc(myCookie);
@@ -349,7 +403,7 @@ public class MyServlet extends HttpServlet
 					int sid = getID(myCookie);
 					sess[0] = String.valueOf(sid);
 					sess[1] = getIP(myCookie);
-					SessionState ss = map.get(Integer.valueOf(sess[0]));
+					SessionState ss = map.get(new SessionTuple(sid, sess[1]));
 					if (ss == null)
 						throw new ServletException("Current session has timed out.");
 					ver = ss.version;
@@ -367,12 +421,38 @@ public class MyServlet extends HttpServlet
 					msg = message;
 					long curTime = System.currentTimeMillis() / 1000;
 					timeout = curTime + SESSION_TIMEOUT_SECS;
+
 					loc[0] = SvrID;
-					// choose a backup server
-					// TODO: call SessionWrite() to backup server and wait for successful response
-					// if (fail) { loc[1] = null; }
-					// else { loc[1] = // TODO: backup server - choose at random from local server's view }
-					loc[1] = loc[0];
+					
+					// choose a backup server from view and call SessionWrite()
+					// TODO: debug dis
+					boolean reply = false;
+					View myCopy = View.copy(view);
+					while (reply == false)
+					{
+						String backup_ip = View.choose(myCopy);
+						if (backup_ip == null) 
+						{
+							// nothing's in view
+							loc[1] = null;
+							break;
+						}
+						else
+						{
+							reply = sessionWrite(sid, sess[1].getBytes(), ver, message, InetAddress.getByAddress(backup_ip.getBytes()));
+							if (reply == true)
+							{
+								loc[1] = backup_ip;
+								break;
+							}
+							else
+							{
+								// remove the invalid ip from view
+								View.remove(myCopy, backup_ip);
+							}
+						}
+					}
+
 					value = concatValue(sess, ver, loc);
 					
 					// store updated info to map (choose primary server)
@@ -384,7 +464,7 @@ public class MyServlet extends HttpServlet
 					myCookie.setMaxAge(0);
 					myCookie.setValue(null);
 					// reconstruct cookie
-					c = new Cookie(cookieName, value);
+					c = new Cookie(cookieName, URLEncoder.encode(value,"UTF-8"));
 					c.setMaxAge(SESSION_TIMEOUT_SECS);		// set timeout!!!
 					c.setComment(msg);
 					
@@ -392,25 +472,9 @@ public class MyServlet extends HttpServlet
 					response.addCookie(c);
 					
 					// forward information to jsp page
-					request.setAttribute("myVal", c.getValue());
+					request.setAttribute("myVal", URLDecoder.decode(c.getValue(),"UTF-8"));
 					request.setAttribute("myMessage", c.getComment());
 			        request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
-				}
-				// logout button
-				else
-				{
-					// remove session info from map
-					map.remove(getID(myCookie));
-					
-					// kill the cookie
-					myCookie.setMaxAge(0);
-					myCookie.setValue(null);
-					
-					// send cookie back to client
-					response.addCookie(myCookie);
-					
-					// forward information to jsp page and display it
-			        request.getRequestDispatcher("/logout.jsp").forward(request, response);
 				}
 				
 				flag = true;
@@ -419,7 +483,95 @@ public class MyServlet extends HttpServlet
 		// if the SessionState is stored in another server, execute RPC calls
 		if (!flag)
 		{
-			// TODO: SessionRead stuff here
+			// extract relevant values for sessionRead
+			int sessNum = getID(myCookie);
+			byte[] servNum = getIP(myCookie).getBytes();
+			int verNum = getVer(myCookie);
+			String[] strLocs = getLoc(myCookie);
+			InetAddress[] inetLocs = new InetAddress[2];
+			inetLocs[0] = InetAddress.getByAddress(strLocs[0].getBytes());
+			inetLocs[1] = InetAddress.getByAddress(strLocs[1].getBytes());
+			
+			String reply = "";
+			if (action.equals("refresh"))
+			{
+				// RPC call
+				reply = sessionRead(sessNum, servNum, verNum, inetLocs);
+				if (reply == null)
+				{
+			        request.getRequestDispatcher("/error.jsp").forward(request, response);
+			        return;
+				}
+			}
+			
+			sess[0] = String.valueOf(sessNum);
+			sess[1] = new String(servNum);
+			ver = verNum;
+			ver++;
+			if (action.equals("replace"))
+			{
+				// retrieve message from form
+				message = request.getParameter("message");
+			}
+			else if (action.equals("refresh"))
+			{
+				// retrieve message from cookie
+				message = reply;
+			}
+			long curTime = System.currentTimeMillis() / 1000;
+			timeout = curTime + SESSION_TIMEOUT_SECS;
+			loc[0] = getIP().getHostAddress();
+			
+			// choose a backup server from view and call SessionWrite()
+			// TODO: debug dis
+			boolean rep = false;
+			View myCopy = View.copy(view);
+			while (rep == false)
+			{
+				String backup_ip = View.choose(myCopy);
+				if (backup_ip == null) 
+				{
+					// nothing's in view
+					loc[1] = null;
+					break;
+				}
+				else 
+				{
+					rep = sessionWrite(sessNum, servNum, ver, message, InetAddress.getByAddress(backup_ip.getBytes()));
+					if (rep == true)
+					{
+						loc[1] = backup_ip;
+						break;
+					}
+					else
+					{
+						// remove the invalid ip from view
+						View.remove(myCopy, backup_ip);
+					}
+				}
+			}
+			value = concatValue(sess, ver, loc);
+			
+			// store updated info to map (choose primary server)
+			SessionTuple sessTup = new SessionTuple(Integer.valueOf(sess[0]), loc[0]);
+			SessionState state = new SessionState(sessTup, ver, message, timeout);
+			map.put(sessTup, state);
+			
+			// kill current cookie
+			myCookie.setMaxAge(0);
+			myCookie.setValue(null);
+			// reconstruct cookie
+			c = new Cookie(cookieName, URLEncoder.encode(value,"UTF-8"));
+			c.setMaxAge(SESSION_TIMEOUT_SECS);		// set timeout!!!
+			c.setComment(message);
+			
+			// send cookie back to client
+			response.addCookie(c);
+			
+			// forward information to jsp page
+			request.setAttribute("myVal", URLDecoder.decode(c.getValue(),"UTF-8"));
+			request.setAttribute("myMessage", c.getComment());
+	        request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
 		}
 		
 	}
@@ -446,7 +598,13 @@ public class MyServlet extends HttpServlet
 	{
 		if (c != null)
 		{
-			String val = c.getValue();
+			String val = "";
+			try {
+				val = URLDecoder.decode(c.getValue(),"UTF-8");
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			String[] tokens = val.split("_");
 			
 			return Integer.valueOf(tokens[0]);
@@ -459,7 +617,13 @@ public class MyServlet extends HttpServlet
 	{
 		if (c != null)
 		{
-			String val = c.getValue();
+			String val = "";
+			try {
+				val = URLDecoder.decode(c.getValue(),"UTF-8");
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			String[] tokens = val.split("_");
 			
 			return String.valueOf(tokens[1]);
@@ -472,7 +636,13 @@ public class MyServlet extends HttpServlet
 	{
 		if (c != null)
 		{
-			String val = c.getValue();
+			String val="";
+			try {
+				val = URLDecoder.decode(c.getValue(),"UTF-8");
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			String[] tokens = val.split("_");
 			
 			return Integer.valueOf(tokens[2]);
@@ -486,7 +656,13 @@ public class MyServlet extends HttpServlet
 		String[] ret = new String[2];
 		if (c != null)
 		{
-			String val = c.getValue();
+			String val = "";
+			try {
+				val = URLDecoder.decode(c.getValue(), "UTF-8");
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			String[] tokens = val.split("_");
 			
 			ret[0] = tokens[3];
@@ -630,7 +806,6 @@ public class MyServlet extends HttpServlet
 	                DatagramSocket rpcSocket = new DatagramSocket(PORT);
 					while(true)
 					{
-						// TODO: RPC SERVER
 						byte[] inBuf = new byte[512]; //BYTE LENGTH?!?!
 						DatagramPacket recvPkt = new DatagramPacket(inBuf, inBuf.length);
 						rpcSocket.receive(recvPkt);
