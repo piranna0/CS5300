@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 public class MyServlet extends HttpServlet 
 {
 	private static final long serialVersionUID = 1L;
+	private static final int ViewSz = 5;
 	private static AtomicInteger sessionID = new AtomicInteger();
 	private String cookieName = "CS5300PROJ1SESSION";
 	public static int SESSION_TIMEOUT_SECS = 15;
@@ -36,6 +37,7 @@ public class MyServlet extends HttpServlet
 	private final byte SESSIONREAD = 0; // operation code
 	private final byte SESSIONWRITE = 1; // operation code
 	private final int PORT = 5300;
+	private String SvrID;
 	
 	private View view = new View();
 	
@@ -81,7 +83,12 @@ public class MyServlet extends HttpServlet
      */
     public MyServlet() {
         super();
-        
+        try {
+			SvrID = InetAddress.getLocalHost().getHostAddress();
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
         garbageCollector();   
     }
 
@@ -457,7 +464,7 @@ public class MyServlet extends HttpServlet
 		
 		try 
 		{
-			addr = InetAddress.getByName(InetAddress.getLocalHost().getHostAddress());
+			addr = InetAddress.getByName(SvrID);
 		} 
 		catch (UnknownHostException e) 
 		{
@@ -619,5 +626,34 @@ public class MyServlet extends HttpServlet
 	private int[] unpackReadRequest(byte[] buffer) {
 		return null;
 	}
+	
+	//Basic view rules
+	public void RPCtimeout(InetAddress addr){
+		String ipAddress = addr.getHostAddress();
+		View.remove(view, ipAddress);
+	}
+	
+	public void RPCReceive(InetAddress addr){
+		String ipAddress = addr.getHostAddress();
+		View.insert(view, ipAddress);
+	}
+	
+	//Gossip Protocol Method
+	public void gossip(InetAddress addr){
+//		TODO: Need RPC call for GetView written
+//		View temp = GetView(addr);
+		View temp = new View();
+		View.union(temp, view);
+		View.remove(temp, SvrID);
+		View.shrink(temp, ViewSz);
+		view = temp;
+	}
+	
+	//Bootstrap method
+	public void bootstrap(){
+		//View temp = ViewDB.readSDBView();
+	}
+	
+	//SimpleDB methods
 	
 }

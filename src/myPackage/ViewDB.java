@@ -9,7 +9,7 @@ import com.amazonaws.services.simpledb.*;
 import com.amazonaws.services.simpledb.model.*;
 
 
-public class testSimpleDB {
+public class ViewDB {
 	static AmazonSimpleDB sdb;
 	static String myDomain = "Proj1b";
 	static String myItem = "Server";
@@ -23,7 +23,7 @@ public class testSimpleDB {
 		
 		try {
 			sdb = new AmazonSimpleDBClient(new PropertiesCredentials(
-					testSimpleDB.class.getResourceAsStream("AwsCredentials.properties")));
+					ViewDB.class.getResourceAsStream("AwsCredentials.properties")));
 			System.out.println(sdb.listDomains());
 			
 			//If sdb doesn't exist somehow
@@ -52,10 +52,11 @@ public class testSimpleDB {
 		readSDBView();
 	}
 	
-	public static ArrayList<String> readSDBView(){
+	public static View readSDBView(){
 		String selectExpression = "select * from " + myDomain + " where Type = '" + serverType + "'";
 		SelectRequest req = new SelectRequest(selectExpression);
-		ArrayList<String> arr = new ArrayList<String>();
+		
+		View v = new View();
 		
 		//Get ip addresses stored in SimpleDB
 		for(Item item : sdb.select(req).getItems()){
@@ -63,12 +64,12 @@ public class testSimpleDB {
 				if(attr.getName().equals(IPAttribute)){
 					System.out.println(attr.getName());
 					System.out.println(attr.getValue());
-					arr.add(attr.getValue());
+					View.insert(v, attr.getValue());
 					break;
 				}
 			}
 		}
-		return arr;
+		return v;
 	}
 	
 	//Takes two parameters:
