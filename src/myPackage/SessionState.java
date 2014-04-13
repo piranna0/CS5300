@@ -1,19 +1,19 @@
 package myPackage;
 
+import java.net.InetAddress;
+
 public class SessionState 
 {
-	public String[] sessionID = new String[2];
+	public SessionTuple sessionID;
 	public int version;
 	public String message;
 	public long timeout;
-	public String[] location = new String[2];
 	
-	public SessionState(String[] s, int v, String m, long t, String[] l)
+	public SessionState(SessionTuple sid, int v, String m, long t)
 	{
-		sessionID = s;
+		sessionID = sid;
 		version = v;
 		message = m;
 		timeout = t;
-		location = l;
 	}
 }

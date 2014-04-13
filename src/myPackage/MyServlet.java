@@ -27,7 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 public class MyServlet extends HttpServlet 
 {
 	private static final long serialVersionUID = 1L;
-	private static int sessionID = 1;
+	private static AtomicInteger sessionID = new AtomicInteger();
 	private String cookieName = "CS5300PROJ1SESSION";
 	public static int SESSION_TIMEOUT_SECS = 15;
 	public static int DISCARD_TIME_DELTA = 1;
@@ -35,6 +35,7 @@ public class MyServlet extends HttpServlet
 	private static AtomicInteger callId = new AtomicInteger();
 	private final byte SESSIONREAD = 0; // operation code
 	private final byte SESSIONWRITE = 1; // operation code
+	private final int PORT = 5300;
 	
 	// Session State table, aka hash map used to store session information
 	// K: sessionID, V: SessionState
@@ -102,7 +103,8 @@ public class MyServlet extends HttpServlet
 		// check if this is client's first request. if so, construct new cookie and new SessionState
 		if (myCookie == null)
 		{
-			sess[0] = String.valueOf(sessionID);
+			int sid = sessionID.getAndAdd(1);
+			sess[0] = String.valueOf(sid);
 			sess[1] = local_ip.getHostAddress();
 			ver = 1;
 			message = "Hello, User!";
@@ -113,7 +115,8 @@ public class MyServlet extends HttpServlet
 			value = concatValue(sess, ver, loc);
 			
 			// store new info to map
-			SessionState state = new SessionState(sess, ver, message, timeout, loc);
+			SessionTuple sessTup = new SessionTuple(sid, loc[0]);
+			SessionState state = new SessionState(sessTup, ver, message, timeout);
 			map.put(Integer.valueOf(sess[0]), state);
 			
 			// construct cookie
@@ -129,7 +132,6 @@ public class MyServlet extends HttpServlet
 			request.setAttribute("myMessage", c.getComment());
 	        request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
 
-			sessionID++;
 		}
 		// otherwise, check if SessionState is stored in local server
 		// i.e. check server_primary or server_backup == server_local
@@ -142,7 +144,8 @@ public class MyServlet extends HttpServlet
 				// if the SessionState is stored in local server, simply reconstruct cookie and update it
 				if (!flag && (local_ip.getHostAddress()).equals(s))
 				{
-					sess[0] = String.valueOf(getID(myCookie));
+					int sid = getID(myCookie);
+					sess[0] = String.valueOf(sid);
 					sess[1] = getIP(myCookie);
 					SessionState ss = map.get(Integer.valueOf(sess[0]));
 					if (ss == null)
@@ -161,7 +164,8 @@ public class MyServlet extends HttpServlet
 					value = concatValue(sess, ver, loc);
 					
 					// store updated info to map (choose primary server)
-					SessionState state = new SessionState(sess, ver, message, timeout, loc);
+					SessionTuple sessTup = new SessionTuple(sid, loc[0]);
+					SessionState state = new SessionState(sessTup, ver, message, timeout);
 					map.replace(Integer.valueOf(sess[0]), state);
 					
 					// kill current cookie
@@ -233,7 +237,8 @@ public class MyServlet extends HttpServlet
 				// replace and refresh buttons
 				if (!action.equals("logout"))
 				{
-					sess[0] = String.valueOf(getID(myCookie));
+					int sid = getID(myCookie);
+					sess[0] = String.valueOf(sid);
 					sess[1] = getIP(myCookie);
 					SessionState ss = map.get(Integer.valueOf(sess[0]));
 					if (ss == null)
@@ -258,11 +263,12 @@ public class MyServlet extends HttpServlet
 					// TODO: call SessionWrite() to backup server and wait for successful response
 					// if (fail) { loc[1] = null; }
 					// else { loc[1] = // TODO: backup server - choose at random from local server's view }
-					loc[1] = ss.location[1];
+					loc[1] = loc[0];
 					value = concatValue(sess, ver, loc);
 					
 					// store updated info to map (choose primary server)
-					SessionState state = new SessionState(sess, ver, msg, timeout, loc);
+					SessionTuple sessTup = new SessionTuple(sid, loc[0]);
+					SessionState state = new SessionState(sessTup, ver, msg, timeout);
 					map.replace(Integer.valueOf(sess[0]), state);
 					
 					// kill current cookie
@@ -400,7 +406,7 @@ public class MyServlet extends HttpServlet
 	// returns a String containing the message (if null, error was encountered)
 	private String sessionRead(
 			int sessNum, int serverId , int sessVersionNum, 
-			InetAddress[] address, int[] port) {
+			InetAddress[] address) {
 		try {
 			DatagramSocket rpcSocket = new DatagramSocket();
 			int newCallId = callId.getAndAdd(1);
@@ -412,7 +418,7 @@ public class MyServlet extends HttpServlet
 			bbuf.putInt(serverId);
 			bbuf.putInt(sessVersionNum);
 			byte[] outBuf = bbuf.array();
-			return sessionReadHelper(newCallId, rpcSocket, outBuf, address, port, 0);
+			return sessionReadHelper(newCallId, rpcSocket, outBuf, address, 0);
 		} catch (SocketException e) {
 			// DatagramSocket could not be opened
 			e.printStackTrace();
@@ -420,12 +426,12 @@ public class MyServlet extends HttpServlet
         return null;
 	}
 	
-	private String sessionReadHelper(int cid, DatagramSocket socket, byte[] outBuf, InetAddress[] address, int[] port, int index) {
+	private String sessionReadHelper(int cid, DatagramSocket socket, byte[] outBuf, InetAddress[] address, int index) {
 		// failed on all calls
-		if (index > address.length || index > port.length) {
+		if (index > address.length) {
 			return null;
 		}
-		DatagramPacket sendPkt = new DatagramPacket(outBuf, outBuf.length, address[index], port[index]);
+		DatagramPacket sendPkt = new DatagramPacket(outBuf, outBuf.length, address[index], PORT);
 		try {
 			socket.send(sendPkt);
 			byte[] inBuf = new byte[516]; // 512 + 4 //TODO restrict input to 256 characters
@@ -442,7 +448,7 @@ public class MyServlet extends HttpServlet
 		} catch (IOException e) {
 			//send failed or timeout
 			e.printStackTrace();
-			return sessionReadHelper(cid, socket, outBuf, address, port, index+1);
+			return sessionReadHelper(cid, socket, outBuf, address, index+1);
 		}
 	}
 	
@@ -450,7 +456,7 @@ public class MyServlet extends HttpServlet
 	// returns whether the call was successful
 	private boolean sessionWrite(
 			int sessNum, int serverId, int sessVersionNum, 
-			int discard_time, String msg, InetAddress address, int port) {
+			int discard_time, String msg, InetAddress address) {
         try {
 			DatagramSocket rpcSocket = new DatagramSocket();
 			int newCallId = callId.getAndAdd(1);
@@ -466,7 +472,7 @@ public class MyServlet extends HttpServlet
 				bbuf.put(b);
 			}
 			byte[] outBuf = bbuf.array();
-	        DatagramPacket sendPkt = new DatagramPacket(outBuf, outBuf.length, address, port);
+	        DatagramPacket sendPkt = new DatagramPacket(outBuf, outBuf.length, address, PORT);
             rpcSocket.send(sendPkt);
             byte[] inBuf = new byte[4]; // response contains callId
             DatagramPacket recvPkt = new DatagramPacket(inBuf, inBuf.length);
@@ -494,20 +500,48 @@ public class MyServlet extends HttpServlet
 			@Override
 			public void run()
 			{
-				while(true)
-				{
-					// TODO: RPC SERVER
+				try {
+	                DatagramSocket rpcSocket = new DatagramSocket(PORT);
+					while(true)
+					{
+						// TODO: RPC SERVER
+						byte[] inBuf = new byte[0]; //BYTE LENGTH?!?!
+						DatagramPacket recvPkt = new DatagramPacket(inBuf, inBuf.length);
+						rpcSocket.receive(recvPkt);
+						InetAddress returnAddr = recvPkt.getAddress();
+						int returnPort = recvPkt.getPort();
+						ByteBuffer bbuf = ByteBuffer.wrap(inBuf);
+						int cid = bbuf.getInt();
+						byte code = bbuf.get();
+						byte[] outBuf = null;
+						switch (code) {
+						case SESSIONREAD:
+							int[] readArgs = unpackReadRequest(inBuf);
+						case SESSIONWRITE:
+							int sessNum = bbuf.getInt();
+							int serverId = bbuf.getInt();
+							int sessionVersionNum = bbuf.getInt();
+							int discardTime = bbuf.getInt();
+							// TODO: make a session state
+							// TODO: do stuff with to update the session state
+							bbuf = ByteBuffer.allocate(4);
+							bbuf.putInt(cid);
+							outBuf = bbuf.array();
+						}
+						DatagramPacket sendPkt = new DatagramPacket(outBuf, outBuf.length, returnAddr, returnPort);
+						rpcSocket.send(sendPkt);
+					}
+				} catch (SocketException e) {
+					// DatagramSocket could not be opened
+					e.printStackTrace();
+				} catch (IOException e) {
+					// error receiving packet
+					e.printStackTrace();
 				}
 			}
 		});
 		daemonThread.setDaemon(true);	// making this thread daemon
 	    daemonThread.start();
-	}
-	
-	// for the daemon thread:
-	// returns whether the byte array is a read or write request
-	private boolean readOrWrite(byte[] buffer) {
-		return true;
 	}
 	
 	// unpackage the received byte array (for the rpc handler thread)
@@ -516,14 +550,6 @@ public class MyServlet extends HttpServlet
 	// returned int array contains:
 	// sessionNum, serverId, sessionVersionNum
 	private int[] unpackReadRequest(byte[] buffer) {
-		return null;
-	}
-	
-	// unpackage the write request byte array (for the rpc handler thread)
-	// byte array contains:
-	// callId, operationCode, sessionNum, serverId, sessionVersionNum, discard_time, msg
-	// returns a SessionState to be saved onto this server
-	private SessionState unpackWriteRequest(byte [] buffer) {
 		return null;
 	}
 	
