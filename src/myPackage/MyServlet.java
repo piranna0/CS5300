@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.Cookie;
@@ -28,62 +29,64 @@ public class MyServlet extends HttpServlet
 	private static final long serialVersionUID = 1L;
 	private static int sessionID = 1;
 	private String cookieName = "CS5300PROJ1SESSION";
-	private final int expiry = 10;
+	public static int SESSION_TIMEOUT_SECS = 15;
+	public static int DISCARD_TIME_DELTA = 1;
 	private final String location = "0";
 	private static AtomicInteger callId = new AtomicInteger();
 	private final byte SESSIONREAD = 0; // operation code
 	private final byte SESSIONWRITE = 1; // operation code
 	
-	private Thread daemonThread;
-	private boolean threadStarted = false;
-    
-	// hash map used to store session information
+	// Session State table, aka hash map used to store session information
 	// K: sessionID, V: SessionState
 	private ConcurrentHashMap<Integer, SessionState> map = new ConcurrentHashMap<Integer, SessionState>();
+	
+	// spawns the garbage collector daemon thread
+	public void garbageCollector()
+	{
+		Thread daemonThread = new Thread(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				while(true)
+				{
+					List<Integer> list = new ArrayList<Integer>(map.keySet());
+					System.out.println("gc:" + list.size() + " session(s)");
+					for (int id : list)
+					{
+						System.out.println("gc:" + id + " has " + (map.get(id).timeout - (int)(System.currentTimeMillis()/1000)) + " seconds left");
+						if (map.get(id).timeout < (int)(System.currentTimeMillis()/1000))
+						{
+							SessionState s = map.remove(id);
+							System.out.println("gc:removed <" + id + ", " + s.sessionID[1] + ">");
+						}
+					}
+					try {
+						Thread.sleep(10*1000);		// 10 seconds
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();		// restore interrupted status
+					}
+				}
+			}
+		});
+		daemonThread.setDaemon(true);	// making this thread daemon
+	    daemonThread.start();
+	}
 	
     /**
      * @see HttpServlet#HttpServlet()
      */
     public MyServlet() {
         super();
+        
+        garbageCollector();   
     }
 
 	/**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException 
-	{
-		// start the daemon thread that removes expired sessions from our map
-		if (!threadStarted)
-		{
-			daemonThread = new Thread(new Runnable()
-			{
-				@Override
-				public void run()
-				{
-					while(true)
-					{
-						List<Integer> list = new ArrayList<Integer>(map.keySet());
-						for (int id : list)
-						{
-							if (map.get(id).timeout < (int)System.currentTimeMillis() / 1000)
-							{
-								map.remove(id);
-							}
-						}
-						try {
-							Thread.sleep(10*1000);		// 10 seconds
-						} catch (InterruptedException e) {
-							Thread.currentThread().interrupt();		// restore interrupted status
-						}
-					}
-				}
-			});
-			daemonThread.setDaemon(true);	// making this thread daemon
-		    daemonThread.start();
-			threadStarted = true;
-		}
-		
+	{	
 		Cookie[] cookies = request.getCookies();
 		Cookie myCookie = findCookie(cookies, cookieName);		// current client's cookie
 		
@@ -104,7 +107,7 @@ public class MyServlet extends HttpServlet
 			ver = 1;
 			message = "Hello, User!";
 			long curTime = System.currentTimeMillis() / 1000;
-			timeout = curTime + expiry;
+			timeout = curTime + SESSION_TIMEOUT_SECS;
 			loc[0] = getIP().getHostAddress();
 			loc[1] = location;				// TODO: choose random server from local server's View
 			value = concatValue(sess, ver, loc);
@@ -115,7 +118,7 @@ public class MyServlet extends HttpServlet
 			
 			// construct cookie
 			c = new Cookie(cookieName, value);
-			c.setMaxAge(expiry);	// set timeout!!!
+			c.setMaxAge(SESSION_TIMEOUT_SECS);	// set timeout!!!
 			c.setComment(message);
 			
 			// send cookie back to client
@@ -148,7 +151,7 @@ public class MyServlet extends HttpServlet
 					ver++;
 					message = ss.message;
 					long curTime = System.currentTimeMillis() / 1000;
-					timeout = curTime + expiry;
+					timeout = curTime + SESSION_TIMEOUT_SECS;
 					loc[0] = getIP().getHostAddress();					
 					// choose a backup server
 					// TODO: call SessionWrite() to backup server and wait for successful response
@@ -166,7 +169,7 @@ public class MyServlet extends HttpServlet
 					myCookie.setValue(null);
 					// reconstruct cookie
 					c = new Cookie(cookieName, value);
-					c.setMaxAge(expiry);		// set timeout!!!
+					c.setMaxAge(SESSION_TIMEOUT_SECS);		// set timeout!!!
 					c.setComment(message);
 					
 					// send cookie back to client
@@ -196,7 +199,15 @@ public class MyServlet extends HttpServlet
 	{
 		Cookie[] cookies = request.getCookies();
 		Cookie myCookie = findCookie(cookies, cookieName);		// current client's cookie
-		
+
+		// in the case of time-out, redirect to time-out page
+		if (myCookie == null)
+		{
+			java.util.Set<Integer> blah2 = map.keySet();
+			request.getRequestDispatcher("/timeout.jsp").forward(request, response);
+			return;
+		}
+        
 		String action = request.getParameter("action");
 		String message = null;
 		
@@ -241,7 +252,7 @@ public class MyServlet extends HttpServlet
 					}
 					msg = message;
 					long curTime = System.currentTimeMillis() / 1000;
-					timeout = curTime + expiry;
+					timeout = curTime + SESSION_TIMEOUT_SECS;
 					loc[0] = getIP().getHostAddress();
 					// choose a backup server
 					// TODO: call SessionWrite() to backup server and wait for successful response
@@ -259,7 +270,7 @@ public class MyServlet extends HttpServlet
 					myCookie.setValue(null);
 					// reconstruct cookie
 					c = new Cookie(cookieName, value);
-					c.setMaxAge(expiry);		// set timeout!!!
+					c.setMaxAge(SESSION_TIMEOUT_SECS);		// set timeout!!!
 					c.setComment(msg);
 					
 					// send cookie back to client
