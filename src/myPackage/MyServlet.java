@@ -155,7 +155,7 @@ public class MyServlet extends HttpServlet
 					message = ss.message;
 					long curTime = System.currentTimeMillis() / 1000;
 					timeout = curTime + SESSION_TIMEOUT_SECS;
-					loc[0] = getIP().getHostAddress();					
+					loc[0] = getIP().getHostAddress();
 					// choose a backup server
 					// TODO: call SessionWrite() to backup server and wait for successful response
 					// if (fail) { loc[1] = null; }
@@ -190,7 +190,59 @@ public class MyServlet extends HttpServlet
 			// if the SessionState is stored in another server, execute RPC calls
 			if (!flag)
 			{
-				// TODO: SessionRead stuff here
+				// extract relevant values for sessionRead
+				int sessNum = getID(myCookie);
+				byte[] servNum = getIP(myCookie).getBytes();
+				int verNum = getVer(myCookie);
+				String[] strLocs = getLoc(myCookie);
+				InetAddress[] inetLocs = new InetAddress[2];
+				inetLocs[0] = InetAddress.getByAddress(strLocs[0].getBytes());
+				inetLocs[1] = InetAddress.getByAddress(strLocs[1].getBytes());
+				
+				// RPC call
+				String reply = sessionRead(sessNum, servNum, verNum, inetLocs);
+				if (reply == null)
+				{
+			        request.getRequestDispatcher("/error.jsp").forward(request, response);
+				}
+				else
+				{
+					sess[0] = String.valueOf(sessNum);
+					sess[1] = new String(servNum);
+					ver = verNum;
+					ver++;
+					message = reply;
+					long curTime = System.currentTimeMillis() / 1000;
+					timeout = curTime + SESSION_TIMEOUT_SECS;
+					loc[0] = getIP().getHostAddress();
+					// choose a backup server
+					// TODO: call SessionWrite() to backup server and wait for successful response
+					// if (fail) { loc[1] = null; }
+					// else { loc[1] = // TODO: backup server - choose at random from local server's view }
+					loc[1] = getLoc(myCookie)[1];
+					value = concatValue(sess, ver, loc);
+					
+					// store updated info to map (choose primary server)
+					SessionTuple sessTup = new SessionTuple(Integer.valueOf(sess[0]), loc[0]);
+					SessionState state = new SessionState(sessTup, ver, message, timeout);
+					map.put(Integer.valueOf(sess[0]), state);
+					
+					// kill current cookie
+					myCookie.setMaxAge(0);
+					myCookie.setValue(null);
+					// reconstruct cookie
+					c = new Cookie(cookieName, value);
+					c.setMaxAge(SESSION_TIMEOUT_SECS);		// set timeout!!!
+					c.setComment(message);
+					
+					// send cookie back to client
+					response.addCookie(c);
+					
+					// forward information to jsp page
+					request.setAttribute("myVal", c.getValue());
+					request.setAttribute("myMessage", c.getComment());
+			        request.getRequestDispatcher("/myServlet.jsp").forward(request, response);
+				}
 			}
 		}
 		
@@ -358,6 +410,19 @@ public class MyServlet extends HttpServlet
 		else 
 			return null;
 	}
+	// returns the version number of the Cookie c
+	private int getVer(Cookie c)
+	{
+		if (c != null)
+		{
+			String val = c.getValue();
+			String[] tokens = val.split("_");
+			
+			return Integer.valueOf(tokens[2]);
+		}
+		else 
+			return -1;
+	}
 	// returns the locations (primary, backup ips)
 	private String[] getLoc(Cookie c)
 	{
@@ -405,7 +470,7 @@ public class MyServlet extends HttpServlet
 	// give an array of addresses and ports from which to read (returns the first result)
 	// returns a String containing the message (if null, error was encountered)
 	private String sessionRead(
-			int sessNum, int serverId , int sessVersionNum, 
+			int sessNum, byte[] serverId , int sessVersionNum, 
 			InetAddress[] address) {
 		try {
 			DatagramSocket rpcSocket = new DatagramSocket();
@@ -415,7 +480,7 @@ public class MyServlet extends HttpServlet
 			bbuf.putInt(newCallId);
 			bbuf.put(SESSIONREAD);
 			bbuf.putInt(sessNum);
-			bbuf.putInt(serverId);
+			//bbuf.putInt(serverId);		// TODO
 			bbuf.putInt(sessVersionNum);
 			byte[] outBuf = bbuf.array();
 			return sessionReadHelper(newCallId, rpcSocket, outBuf, address, 0);
@@ -455,7 +520,7 @@ public class MyServlet extends HttpServlet
 	// sessionWrite to one remote server
 	// returns whether the call was successful
 	private boolean sessionWrite(
-			int sessNum, int serverId, int sessVersionNum, 
+			int sessNum, byte[] serverId, int sessVersionNum, 
 			int discard_time, String msg, InetAddress address) {
         try {
 			DatagramSocket rpcSocket = new DatagramSocket();
@@ -465,7 +530,7 @@ public class MyServlet extends HttpServlet
 			bbuf.putInt(newCallId);
 			bbuf.put(SESSIONWRITE);
 			bbuf.putInt(sessNum);
-			bbuf.putInt(serverId);
+			//bbuf.putInt(serverId);		//TODO
 			bbuf.putInt(sessVersionNum);
 			bbuf.putInt(discard_time);
 			for (byte b : msg.getBytes()) {
