@@ -1057,7 +1057,7 @@ public class MyServlet extends HttpServlet
 			{
 				while(true)
 				{
-					View temp = ViewDB.readSDBView();
+					View temp = ViewDB.readSDBView(ViewSz);
 					System.out.println("BootStrap temp: " + temp);
 					System.out.println("BootStrap view: " + view);
 					View.remove(temp, SvrID);
@@ -1066,7 +1066,7 @@ public class MyServlet extends HttpServlet
 					view = View.copy(temp);
 					View.insert(temp, SvrID);
 					View.shrink(temp, ViewSz);
-					ViewDB.writeSDBView(temp);
+					ViewDB.writeSDBView(temp, ViewSz);
 					try {
 						Thread.sleep(BOOTSTRAP_MSECS);
 					} catch (InterruptedException e) {
