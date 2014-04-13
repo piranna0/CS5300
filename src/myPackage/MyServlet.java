@@ -483,7 +483,9 @@ public class MyServlet extends HttpServlet
 			bbuf.putInt(newCallId);
 			bbuf.put(SESSIONREAD);
 			bbuf.putInt(sessNum);
-			//bbuf.putInt(serverId);		// TODO
+			for (byte b : serverId) {
+				bbuf.put(b);
+			}
 			bbuf.putInt(sessVersionNum);
 			byte[] outBuf = bbuf.array();
 			return sessionReadHelper(newCallId, rpcSocket, outBuf, address, 0);
@@ -502,7 +504,7 @@ public class MyServlet extends HttpServlet
 		DatagramPacket sendPkt = new DatagramPacket(outBuf, outBuf.length, address[index], PORT);
 		try {
 			socket.send(sendPkt);
-			byte[] inBuf = new byte[516]; // 512 + 4 //TODO restrict input to 256 characters
+			byte[] inBuf = new byte[512];
 			DatagramPacket recvPkt = new DatagramPacket(inBuf, inBuf.length);
 			ByteBuffer bbuf = null;
 			int recvCallId = -1;
@@ -529,16 +531,15 @@ public class MyServlet extends HttpServlet
 			DatagramSocket rpcSocket = new DatagramSocket();
 			int newCallId = callId.getAndAdd(1);
 
-			ByteBuffer bbuf = ByteBuffer.allocate(4*5 + 1 + 2*msg.length()); //5 ints + 1 byte + string
+			ByteBuffer bbuf = ByteBuffer.allocate(4*4 + 8 + 1 + 2*msg.length()); //5 ints + 1 byte + string
 			bbuf.putInt(newCallId);
 			bbuf.put(SESSIONWRITE);
 			bbuf.putInt(sessNum);
-			//bbuf.putInt(serverId);		//TODO
 			for (byte b : serverId) {
 				bbuf.put(b);
 			}
 			bbuf.putInt(sessVersionNum);
-			bbuf.putInt((int)(System.currentTimeMillis()/1000) + DISCARD_TIME_DELTA + SESSION_TIMEOUT_SECS);
+			bbuf.putLong((System.currentTimeMillis()/1000) + DISCARD_TIME_DELTA + SESSION_TIMEOUT_SECS);
 			for (byte b : msg.getBytes()) {
 				bbuf.put(b);
 			}
@@ -576,25 +577,38 @@ public class MyServlet extends HttpServlet
 					while(true)
 					{
 						// TODO: RPC SERVER
-						byte[] inBuf = new byte[0]; //BYTE LENGTH?!?!
+						byte[] inBuf = new byte[512]; //BYTE LENGTH?!?!
 						DatagramPacket recvPkt = new DatagramPacket(inBuf, inBuf.length);
 						rpcSocket.receive(recvPkt);
 						InetAddress returnAddr = recvPkt.getAddress();
 						int returnPort = recvPkt.getPort();
+
 						ByteBuffer bbuf = ByteBuffer.wrap(inBuf);
 						int cid = bbuf.getInt();
 						byte code = bbuf.get();
+                        int sessNum = bbuf.getInt();
+                        bbuf.getInt(); // increment by four bytes (the same four used to make the serverId below)
+                        String serverIdAddr = new String(inBuf, 8, 4);
+                        int sessionVersionNum = bbuf.getInt();
+                        SessionTuple sessTup = new SessionTuple(sessNum, serverIdAddr);
+                        SessionState sessState = null;
+
 						byte[] outBuf = null;
 						switch (code) {
 						case SESSIONREAD:
-							int[] readArgs = unpackReadRequest(inBuf);
+							sessState = map.get(sessTup);
+							bbuf = ByteBuffer.allocate(4 + sessState.message.length()*2);
+							bbuf.putInt(cid);
+							for (byte b : sessState.message.getBytes()) {
+								bbuf.put(b);
+							}
+							outBuf = bbuf.array();
 						case SESSIONWRITE:
-							int sessNum = bbuf.getInt();
-							int serverId = bbuf.getInt();
-							int sessionVersionNum = bbuf.getInt();
-							int discardTime = bbuf.getInt();
-							// TODO: make a session state
-							// TODO: do stuff with to update the session state
+							long discardTime = bbuf.getLong();
+							String msg = new String(inBuf, 25, recvPkt.getLength()-25);
+							sessState = new SessionState(sessTup, sessionVersionNum, msg, discardTime);
+							map.put(sessTup, sessState);
+
 							bbuf = ByteBuffer.allocate(4);
 							bbuf.putInt(cid);
 							outBuf = bbuf.array();
@@ -615,13 +629,12 @@ public class MyServlet extends HttpServlet
 	    daemonThread.start();
 	}
 	
-	// unpackage the received byte array (for the rpc handler thread)
-	// byte array contains:
-	// callId, operationCode, sessionNum, serverId, sessionVersionNum
-	// returned int array contains:
-	// sessionNum, serverId, sessionVersionNum
-	private int[] unpackReadRequest(byte[] buffer) {
-		return null;
+	private String inetaddrToString(InetAddress addr) {
+		return new String(addr.getAddress());
+	}
+	
+	private byte[] inetaddrToArray(InetAddress addr) {
+		return addr.getAddress();
 	}
 	
 }
