@@ -122,6 +122,11 @@ public class ViewDB {
 		return null;
 	}
 	
+	/*
+	 * TODO: Change Write so that it always writes ViewSz elements and then size. The deleting part scares me a little with concurrent accesses
+	 */
+	
+	
 	//Takes two parameters:
 	//1: List of ip addresses to be written
 	//2: number of attributes stored in database previously(must remove extras)
