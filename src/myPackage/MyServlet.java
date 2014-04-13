@@ -496,7 +496,7 @@ public class MyServlet extends HttpServlet
 	
 	// to be called in the MyServlet constructor
 	private void rpcServer() {
-		daemonThread = new Thread(new Runnable() {
+		Thread daemonThread = new Thread(new Runnable() {
 			@Override
 			public void run()
 			{
