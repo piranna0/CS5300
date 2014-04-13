@@ -95,7 +95,7 @@ public class MyServlet extends HttpServlet
 		}
 
 		garbageCollector(); 
-rpcServer();
+		rpcServer();
 		bootstrap();
 		gossip();
 	}
@@ -725,7 +725,7 @@ rpcServer();
 			} while(recvCallId != cid);
 			byte success = bbuf.get();
 			if (success==1) {
-                return new String(inBuf, 5, recvPkt.getLength()-5);
+				return new String(inBuf, 5, recvPkt.getLength()-5);
 			} else {
 				return null;
 			}
@@ -807,26 +807,26 @@ rpcServer();
 						ByteBuffer bbuf = ByteBuffer.wrap(inBuf);
 						int cid = bbuf.getInt();
 						byte opCode = bbuf.get();
-                        int sessNum = bbuf.getInt();
-                        bbuf.getInt(); // increment by four bytes (the same four used to make the serverId below)
-                        String serverIdAddr = new String(inBuf, 8, 4);
-                        int sessionVersionNum = bbuf.getInt();
-                        SessionTuple sessTup = new SessionTuple(sessNum, serverIdAddr);
-                        SessionState sessState = null;
+						int sessNum = bbuf.getInt();
+						bbuf.getInt(); // increment by four bytes (the same four used to make the serverId below)
+						String serverIdAddr = new String(inBuf, 8, 4);
+						int sessionVersionNum = bbuf.getInt();
+						SessionTuple sessTup = new SessionTuple(sessNum, serverIdAddr);
+						SessionState sessState = null;
 
 						byte[] outBuf = null;
 						if (opCode == SESSIONREAD) {
 							sessState = map.get(sessTup);
 							if (sessState != null) {
-                                bbuf = ByteBuffer.allocate(4 + 1 + sessState.message.length()*2);
-                                bbuf.putInt(cid);
+								bbuf = ByteBuffer.allocate(4 + 1 + sessState.message.length()*2);
+								bbuf.putInt(cid);
 								bbuf.put((byte) 1);
-                                for (byte b : sessState.message.getBytes()) {
-                                        bbuf.put(b);
-                                }
+								for (byte b : sessState.message.getBytes()) {
+									bbuf.put(b);
+								}
 							} else {
-                                bbuf = ByteBuffer.allocate(4 + 1);
-                                bbuf.putInt(cid);
+								bbuf = ByteBuffer.allocate(4 + 1);
+								bbuf.putInt(cid);
 								bbuf.put((byte) 0);
 							}
 							outBuf = bbuf.array();
@@ -900,8 +900,6 @@ rpcServer();
 							//		View temp = GetView(addr);
 						}
 					}
-
-					temp = new View();
 					View.union(temp, view);
 					View.remove(temp, SvrID);
 					View.shrink(temp, ViewSz);
