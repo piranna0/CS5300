@@ -59,7 +59,7 @@ public class MyServlet extends HttpServlet
 						if (map.get(id).timeout < (int)(System.currentTimeMillis()/1000))
 						{
 							SessionState s = map.remove(id);
-							System.out.println("gc:removed <" + id + ", " + s.sessionID[1] + ">");
+							System.out.println("gc:removed <" + id + ", " + s.sessionID.serverId + ">");
 						}
 					}
 					try {
