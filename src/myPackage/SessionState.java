@@ -1,7 +1,5 @@
 package myPackage;
 
-import java.net.InetAddress;
-
 public class SessionState 
 {
 	public SessionTuple sessionID;

@@ -1,7 +1,5 @@
 package myPackage;
 
-import java.net.InetAddress;
-
 public class SessionTuple {
 	public int sessionNum;
 	public String serverId;
@@ -22,9 +20,9 @@ public class SessionTuple {
 		return false;
 	}
 	
-//	@Override
-//	public int hashCode() {
-//		// TODO
-//	}
+	@Override
+	public int hashCode() {
+		return 17*sessionNum + serverId.hashCode();
+	}
 
 }
