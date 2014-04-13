@@ -655,9 +655,14 @@ public class MyServlet extends HttpServlet
 	
 	//Bootstrap method
 	public void bootstrap(){
-		//View temp = ViewDB.readSDBView();
+		View temp = ViewDB.readSDBView();
+		View.remove(temp, SvrID);
+		View.union(temp, view);
+		View.shrink(temp, ViewSz);
+		view = View.copy(temp);
+		View.insert(temp, SvrID);
+		View.shrink(temp, ViewSz);
+		ViewDB.writeSDBView(temp);
 	}
-	
-	//SimpleDB methods
 	
 }

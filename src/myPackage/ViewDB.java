@@ -2,6 +2,7 @@ package myPackage;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 import com.amazonaws.auth.PropertiesCredentials;
@@ -37,12 +38,12 @@ public class ViewDB {
 		}
 		
 		
-		
-		ArrayList<String> arr = new ArrayList<String>();
-		arr.add("1.1.1.1");
-//		arr.add("2.2.2.2");
-//		arr.add("3.3.3.3");
-		writeSDBView(arr);
+		View v = new View();
+		HashSet<String> arr = new HashSet<String>();
+		View.insert(v, "1.1.1.1");
+		View.insert(v, "1.1.1.2");
+		View.insert(v, "1.1.1.3");
+		writeSDBView(v);
 		try {
 			Thread.sleep(3000);
 		} catch (InterruptedException e) {
@@ -75,19 +76,20 @@ public class ViewDB {
 	//Takes two parameters:
 	//1: List of ip addresses to be written
 	//2: number of attributes stored in database previously(must remove extras)
-	public static void writeSDBView(List<String> ips){
+	public static void writeSDBView(View v){
 		int size = 0;
-		int i;
-		
+		int i=0;
+		HashSet<String> ips = View.getIPs(v);
 		//Replace previous attributes with new IP addresses
-		for(i = 0; i < ips.size(); i++){
+		for(String ip : ips){
 			ReplaceableAttribute replaceAttributeType = new ReplaceableAttribute().withName(typeAttribute).
 					withValue(serverType).withReplace(true);
 			ReplaceableAttribute replaceAttribute = new ReplaceableAttribute().withName(IPAttribute).
-					withValue(ips.get(i)).withReplace(true);
+					withValue(ip).withReplace(true);
 			
 			sdb.putAttributes(new PutAttributesRequest().withDomainName(myDomain).withItemName(myItem + i)
 					.withAttributes(replaceAttributeType, replaceAttribute));
+			i++;
 		}
 		
 		//Get size of database so we can overwrite old entries
