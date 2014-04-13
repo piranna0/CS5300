@@ -62,15 +62,15 @@ public class MyServlet extends HttpServlet
 			{
 				while(true)
 				{
-					//					System.out.println("gc:" + map.keySet().size() + " session(s)");
+//                    System.out.println("gc:" + map.keySet().size() + " session(s)");
 					for (SessionTuple tup : map.keySet())
 					{
 						SessionState state = map.get(tup);
-						//						System.out.println("gc:" + tup.serverId + "/" + tup.sessionNum + " has " + (state.timeout - (int)(System.currentTimeMillis()/1000)) + " seconds left");
+//                        System.out.println("gc:" + convertToReadableIP(tup.serverId) + "/" + tup.sessionNum + " has " + (state.timeout - (int)(System.currentTimeMillis()/1000)) + " seconds left");
 						if (state.timeout < (int)(System.currentTimeMillis()/1000))
 						{
 							SessionState s = map.remove(tup);
-							System.out.println("gc:removed <" + tup.serverId + "/" + tup.sessionNum + ", " + s.sessionID.serverId + ">");
+							System.out.println("gc:removed <" + convertToReadableIP(tup.serverId) + "/" + tup.sessionNum + ", " + convertToReadableIP(s.sessionID.serverId) + ">");
 						}
 					}
 					try {
@@ -159,15 +159,6 @@ public class MyServlet extends HttpServlet
 				}
 			}
 			value = concatValue(sess, ver, loc);
-			
-			String[] sess_print = new String[2];
-			sess_print[0] = sess[0];
-			sess_print[1] = ViewDB.convertToReadableIP(sess[1]);
-			String[] loc_print = new String[2];
-			loc_print[0] = ViewDB.convertToReadableIP(loc[0]);
-			//loc_print[1] = ViewDB.convertToReadableIP(loc[1]);
-			loc_print[1] = loc[1];
-			String value_print = concatValue(sess_print, ver, loc_print);
 
 			// store new info to map
 			SessionTuple sessTup = new SessionTuple(sid, loc[0]);
@@ -183,8 +174,7 @@ public class MyServlet extends HttpServlet
 			response.addCookie(c);
 
 			// forward information to jsp page
-			//request.setAttribute("myVal", URLDecoder.decode(c.getValue(),"UTF-8"));
-			request.setAttribute("myVal", value_print);
+			request.setAttribute("myVal", concatPrint(sess, ver, loc));
 			request.setAttribute("myMessage", c.getComment());
 			request.setAttribute("myLocation", "New session created and stored in " + ViewDB.convertToReadableIP(SvrID));
 			request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
@@ -242,15 +232,6 @@ public class MyServlet extends HttpServlet
 					}
 					value = concatValue(sess, ver, loc);
 
-					String[] sess_print = new String[2];
-					sess_print[0] = sess[0];
-					sess_print[1] = ViewDB.convertToReadableIP(sess[1]);
-					String[] loc_print = new String[2];
-					loc_print[0] = ViewDB.convertToReadableIP(loc[0]);
-					//loc_print[1] = ViewDB.convertToReadableIP(loc[1]);
-					loc_print[1] = loc[1];
-					String value_print = concatValue(sess_print, ver, loc_print);
-
 					// store updated info to map (choose primary server)
 					SessionTuple sessTup = new SessionTuple(sid, loc[0]);
 					SessionState state = new SessionState(sessTup, ver, message, timeout);
@@ -268,8 +249,7 @@ public class MyServlet extends HttpServlet
 					response.addCookie(c);
 
 					// forward information to jsp page
-					//request.setAttribute("myVal", URLDecoder.decode(c.getValue(),"UTF-8"));
-					request.setAttribute("myVal", value_print);
+					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
 					request.setAttribute("myLocation", "Existing session found locally in " + ViewDB.convertToReadableIP(SvrID));
 					request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
@@ -343,15 +323,6 @@ public class MyServlet extends HttpServlet
 					}
 					value = concatValue(sess, ver, loc);
 
-					String[] sess_print = new String[2];
-					sess_print[0] = sess[0];
-					sess_print[1] = ViewDB.convertToReadableIP(sess[1]);
-					String[] loc_print = new String[2];
-					loc_print[0] = ViewDB.convertToReadableIP(loc[0]);
-					//loc_print[1] = ViewDB.convertToReadableIP(loc[1]);
-					loc_print[1] = loc[1];
-					String value_print = concatValue(sess_print, ver, loc_print);
-
 					// store updated info to map (choose primary server)
 					SessionTuple sessTup = new SessionTuple(Integer.valueOf(sess[0]), loc[0]);
 					SessionState state = new SessionState(sessTup, ver, message, timeout);
@@ -369,8 +340,7 @@ public class MyServlet extends HttpServlet
 					response.addCookie(c);
 
 					// forward information to jsp page
-					//request.setAttribute("myVal", URLDecoder.decode(c.getValue(),"UTF-8"));
-					request.setAttribute("myVal", value_print);
+					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
 					request.setAttribute("myLocation", "Existing session found remotely in " + ViewDB.convertToReadableIP(SvrID));
 					// TODO: have sessionRead return the serverIP who replied 
@@ -504,15 +474,6 @@ public class MyServlet extends HttpServlet
 
 					value = concatValue(sess, ver, loc);
 
-					String[] sess_print = new String[2];
-					sess_print[0] = sess[0];
-					sess_print[1] = ViewDB.convertToReadableIP(sess[1]);
-					String[] loc_print = new String[2];
-					loc_print[0] = ViewDB.convertToReadableIP(loc[0]);
-					//loc_print[1] = ViewDB.convertToReadableIP(loc[1]);
-					loc_print[1] = loc[1];
-					String value_print = concatValue(sess_print, ver, loc_print);
-
 					// store updated info to map (choose primary server)
 					SessionTuple sessTup = new SessionTuple(sid, loc[0]);
 					SessionState state = new SessionState(sessTup, ver, msg, timeout);
@@ -530,8 +491,7 @@ public class MyServlet extends HttpServlet
 					response.addCookie(c);
 
 					// forward information to jsp page
-					//request.setAttribute("myVal", URLDecoder.decode(c.getValue(),"UTF-8"));
-					request.setAttribute("myVal", value_print);
+					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
 					request.setAttribute("myLocation", "Existing session found locally in " + ViewDB.convertToReadableIP(SvrID));
 					request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
@@ -619,15 +579,6 @@ public class MyServlet extends HttpServlet
 			}
 			value = concatValue(sess, ver, loc);
 
-			String[] sess_print = new String[2];
-			sess_print[0] = sess[0];
-			sess_print[1] = ViewDB.convertToReadableIP(sess[1]);
-			String[] loc_print = new String[2];
-			loc_print[0] = ViewDB.convertToReadableIP(loc[0]);
-			//loc_print[1] = ViewDB.convertToReadableIP(loc[1]);
-			loc_print[1] = loc[1];
-			String value_print = concatValue(sess_print, ver, loc_print);
-
 			// store updated info to map (choose primary server)
 			SessionTuple sessTup = new SessionTuple(Integer.valueOf(sess[0]), loc[0]);
 			SessionState state = new SessionState(sessTup, ver, message, timeout);
@@ -645,8 +596,7 @@ public class MyServlet extends HttpServlet
 			response.addCookie(c);
 
 			// forward information to jsp page
-			//request.setAttribute("myVal", URLDecoder.decode(c.getValue(),"UTF-8"));
-			request.setAttribute("myVal", value_print);
+			request.setAttribute("myVal", concatPrint(sess, ver, loc));
 			request.setAttribute("myMessage", c.getComment());
 			request.setAttribute("myLocation", "Existing session found locally in " + ViewDB.convertToReadableIP(SvrID));
 			// TODO: have sessionRead return the serverIP who replied 
@@ -708,7 +658,7 @@ public class MyServlet extends HttpServlet
 			}
 			String[] tokens = val.split("_");
 
-			return String.valueOf(tokens[1]);
+			return tokens[1];
 		}
 		else 
 			return null;
@@ -761,6 +711,13 @@ public class MyServlet extends HttpServlet
 		return sess[0] + "_" + sess[1] + "_" + 
 				String.valueOf(ver) + "_" + 
 				loc[0] + "_" + loc[1];
+	}
+	
+	private String concatPrint(String[] sess, int ver, String[] loc) {
+		return sess[0] + "_" + convertToReadableIP(sess[1]) + "_" + 
+				String.valueOf(ver) + "_" + 
+				//convertToReadableIP(loc[0]) + "_" + convertToReadableIP(loc[1]);
+				convertToReadableIP(loc[0]) + "_" + loc[1];
 	}
 
 	// running on local tomcat
@@ -1110,7 +1067,7 @@ public class MyServlet extends HttpServlet
 	
 	private String convertToReadableIP(String addr) {
 		byte[] bytes = addr.getBytes();
-		InetAddress a;
+		InetAddress a = null;
 		try {
 			a = InetAddress.getByAddress(bytes);
 			return a.getHostAddress();
