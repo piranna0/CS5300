@@ -16,11 +16,19 @@ public class ViewDB {
 	static AmazonSimpleDB sdb;
 	static String myDomain = "Proj1b";
 	static String myItem = "Server";
+	
 	static String typeAttribute = "Type";
 	static String serverType = "Server";
 	static String sizeType = "Size";
+	
 	static String IPAttribute = "IP";
 	static String sizeAttribute = "Size";
+	static String indexAttribute = "Index";
+	static String validAttribute = "Valid";
+	
+	static String trueValue = "True";
+	static String falseValue = "False";
+			
 	public static void main(String[] args){
 //		
 //		
@@ -51,7 +59,7 @@ public class ViewDB {
 ////			// TODO Auto-generated catch block
 ////			e.printStackTrace();
 ////		}
-		readSDBView();
+		readSDBView(5);
 //		try {
 //			System.out.println(inetaddrToString(InetAddress.getLocalHost()));
 //			System.out.println(convertToReadableIP(inetaddrToString(InetAddress.getLocalHost())));
@@ -83,8 +91,10 @@ public class ViewDB {
 		}
 	}
 	
-	public static View readSDBView(){
-		String selectExpression = "select * from " + myDomain + " where Type = '" + serverType + "'";
+	public static View readSDBView(int ViewSz){
+		String selectExpression = "select * from " + myDomain + " where Type = '" + serverType + "'" +
+				 		 					    " and " + validAttribute + " = '" + trueValue + "'" +
+				 		 					    " and " + indexAttribute + " < '" + ViewSz + "'";
 		SelectRequest req = new SelectRequest(selectExpression);
 		
 		View v = new View();
@@ -131,7 +141,7 @@ public class ViewDB {
 	//Takes two parameters:
 	//1: List of ip addresses to be written
 	//2: number of attributes stored in database previously(must remove extras)
-	public static void writeSDBView(View v){
+	public static void writeSDBView(View v, int ViewSz){
 		int size = 0;
 		int i=0;
 		HashSet<String> ips = View.getIPs(v);
@@ -141,27 +151,46 @@ public class ViewDB {
 					withValue(serverType).withReplace(true);
 			ReplaceableAttribute replaceAttribute = new ReplaceableAttribute().withName(IPAttribute).
 					withValue(convertToReadableIP(ip)).withReplace(true);
+			ReplaceableAttribute replaceAttributeIndex = new ReplaceableAttribute().withName(indexAttribute).
+					withValue(Integer.toString(i)).withReplace(true);
+			ReplaceableAttribute replaceAttributeValid = new ReplaceableAttribute().withName(validAttribute).
+					withValue(trueValue).withReplace(true);
 			
 			sdb.putAttributes(new PutAttributesRequest().withDomainName(myDomain).withItemName(myItem + i)
-					.withAttributes(replaceAttributeType, replaceAttribute));
+					.withAttributes(replaceAttributeType, replaceAttribute, replaceAttributeIndex, replaceAttributeValid));
 			i++;
 		}
 		
-		//Get size of database so we can overwrite old entries
-		String selectExpression = "select * from " + myDomain + " where Type = '" + sizeType + "'";
-		SelectRequest req = new SelectRequest(selectExpression);
-		ArrayList<String> arr = new ArrayList<String>();
-		for(Item item : sdb.select(req).getItems()){
-			for(Attribute attr : item.getAttributes()){
-				if(attr.getName().equals(sizeAttribute)){
-					arr.add(attr.getValue());
-					size = Integer.parseInt(attr.getValue());
-					break;
-				}
-			}
+		for(; i < ViewSz; i++){
+			ReplaceableAttribute replaceAttributeType = new ReplaceableAttribute().withName(typeAttribute).
+					withValue(serverType).withReplace(true);
+			ReplaceableAttribute replaceAttribute = new ReplaceableAttribute().withName(IPAttribute).
+					withValue("0.0.0.0").withReplace(true);
+			ReplaceableAttribute replaceAttributeIndex = new ReplaceableAttribute().withName(indexAttribute).
+					withValue(Integer.toString(i)).withReplace(true);
+			ReplaceableAttribute replaceAttributeValid = new ReplaceableAttribute().withName(validAttribute).
+					withValue(falseValue).withReplace(true);
+			
+			sdb.putAttributes(new PutAttributesRequest().withDomainName(myDomain).withItemName(myItem + i)
+					.withAttributes(replaceAttributeType, replaceAttribute, replaceAttributeIndex, replaceAttributeValid));
 		}
 		
-		//Add size item
+		
+		//Get size of database so we can overwrite old entries
+//		String selectExpression = "select * from " + myDomain + " where Type = '" + sizeType + "'";
+//		SelectRequest req = new SelectRequest(selectExpression);
+//		ArrayList<String> arr = new ArrayList<String>();
+//		for(Item item : sdb.select(req).getItems()){
+//			for(Attribute attr : item.getAttributes()){
+//				if(attr.getName().equals(sizeAttribute)){
+//					arr.add(attr.getValue());
+//					size = Integer.parseInt(attr.getValue());
+//					break;
+//				}
+//			}
+//		}
+//		
+//		//Add size item
 		ReplaceableAttribute replaceAttributeSize = new ReplaceableAttribute().withName(sizeAttribute).
 				withValue(Integer.toString(ips.size())).withReplace(true);		
 		ReplaceableAttribute replaceAttribute = new ReplaceableAttribute().withName(typeAttribute).
@@ -169,11 +198,11 @@ public class ViewDB {
 		
 		sdb.putAttributes(new PutAttributesRequest().withDomainName(myDomain).withItemName(myItem + i)
 				.withAttributes(replaceAttribute,replaceAttributeSize));
-		i++;//Delete all items after size item
-		
-		//Delete extra attributes
-		for(; i < size+1; i++){
-			sdb.deleteAttributes(new DeleteAttributesRequest(myDomain, myItem + i));
-		}
+//		i++;//Delete all items after size item
+//		
+//		//Delete extra attributes
+//		for(; i < size+1; i++){
+//			sdb.deleteAttributes(new DeleteAttributesRequest(myDomain, myItem + i));
+//		}
 	}
 }
