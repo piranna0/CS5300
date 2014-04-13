@@ -96,11 +96,12 @@ public class ViewDB {
 				if(attr.getName().equals(IPAttribute)){
 					try {
 						View.insert(v, inetaddrToString(InetAddress.getByName(attr.getValue())));
+						System.out.println(InetAddress.getByAddress(View.choose(v).getBytes()));
 					} catch (UnknownHostException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-					System.out.println("attr:" + attr.getValue());
+//					System.out.println("attr:" + attr.getValue());
 					break;
 				}
 			}
@@ -136,7 +137,6 @@ public class ViewDB {
 		HashSet<String> ips = View.getIPs(v);
 		//Replace previous attributes with new IP addresses
 		for(String ip : ips){
-			System.out.println("WRITE: " + ip);
 			ReplaceableAttribute replaceAttributeType = new ReplaceableAttribute().withName(typeAttribute).
 					withValue(serverType).withReplace(true);
 			ReplaceableAttribute replaceAttribute = new ReplaceableAttribute().withName(IPAttribute).
