@@ -147,7 +147,7 @@ public class MyServlet extends HttpServlet
 				if (backup_ip == null) 
 				{
 					// nothing's in view
-					loc[1] = null;
+					loc[1] = inetaddrToString(InetAddress.getByName("0.0.0.0"));
 					break;
 				}
 				else
@@ -201,7 +201,11 @@ public class MyServlet extends HttpServlet
 					sess[1] = getIP(myCookie);
 					SessionState ss = map.get(new SessionTuple(sid, sess[1]));
 					if (ss == null)
-						throw new ServletException("Current session has timed out.");
+					{
+						// forward information to jsp page and display it
+				        request.getRequestDispatcher("/error.jsp").forward(request, response);
+				        return;
+					}
 					ver = ss.version;
 					ver++;
 					message = ss.message;
@@ -219,7 +223,7 @@ public class MyServlet extends HttpServlet
 						if (backup_ip == null) 
 						{
 							// nothing's in view
-							loc[1] = null;
+							loc[1] = inetaddrToString(InetAddress.getByName("0.0.0.0"));
 							break;
 						}
 						else 
@@ -310,7 +314,7 @@ public class MyServlet extends HttpServlet
 						if (backup_ip == null) 
 						{
 							// nothing's in view
-							loc[1] = null;
+							loc[1] = inetaddrToString(InetAddress.getByName("0.0.0.0"));
 							break;
 						}
 						else 
@@ -431,7 +435,11 @@ public class MyServlet extends HttpServlet
 					sess[1] = getIP(myCookie);
 					SessionState ss = map.get(new SessionTuple(sid, sess[1]));
 					if (ss == null)
-						throw new ServletException("Current session has timed out.");
+					{
+						// forward information to jsp page and display it
+				        request.getRequestDispatcher("/error.jsp").forward(request, response);
+				        return;
+					}
 					ver = ss.version;
 					ver++;
 					if (action.equals("replace"))
@@ -460,7 +468,7 @@ public class MyServlet extends HttpServlet
 						if (backup_ip == null) 
 						{
 							// nothing's in view
-							loc[1] = null;
+							loc[1] = inetaddrToString(InetAddress.getByName("0.0.0.0"));
 							break;
 						}
 						else
@@ -566,7 +574,7 @@ public class MyServlet extends HttpServlet
 				if (backup_ip == null) 
 				{
 					// nothing's in view
-					loc[1] = null;
+					loc[1] = inetaddrToString(InetAddress.getByName("0.0.0.0"));
 					break;
 				}
 				else 
