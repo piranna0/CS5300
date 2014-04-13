@@ -10,6 +10,8 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -37,6 +39,7 @@ public class MyServlet extends HttpServlet
 	private static AtomicInteger callId = new AtomicInteger();
 	private final byte SESSIONREAD = 0; // operation code
 	private final byte SESSIONWRITE = 1; // operation code
+	private final byte GETVIEW = 2; //operation code
 	private final int PORT = 5300;
 	private String SvrID;
 
@@ -266,7 +269,16 @@ public class MyServlet extends HttpServlet
 				String reply = sessionRead(sessNum, servNum, verNum, inetLocs);
 				if (reply == null)
 				{
-					request.getRequestDispatcher("/error.jsp").forward(request, response);
+//					// send a dead cookie
+//					Cookie myDeadCookie = new Cookie(cookieName, "");
+//					myDeadCookie.setMaxAge(0);
+//					myDeadCookie.setValue(null);
+//					
+//					// send cookie back to client
+//					response.addCookie(myDeadCookie);
+					
+					// forward information to jsp page and display it
+			        request.getRequestDispatcher("/error.jsp").forward(request, response);
 				}
 				else
 				{
@@ -342,7 +354,17 @@ public class MyServlet extends HttpServlet
 		// in the case of time-out, redirect to time-out page
 		if (myCookie == null)
 		{
+//			// send a dead cookie
+//			Cookie myDeadCookie = new Cookie(cookieName, "");
+//			myDeadCookie.setMaxAge(0);
+//			myDeadCookie.setValue(null);
+//			
+//			// send cookie back to client
+//			response.addCookie(myDeadCookie);
+			
+			// forward information to jsp page and display it
 			request.getRequestDispatcher("/timeout.jsp").forward(request, response);
+			
 			return;
 		}
 
@@ -484,8 +506,17 @@ public class MyServlet extends HttpServlet
 				reply = sessionRead(sessNum, servNum, verNum, inetLocs);
 				if (reply == null)
 				{
-					request.getRequestDispatcher("/error.jsp").forward(request, response);
-					return;
+//					// send a dead cookie
+//					myCookie = new Cookie(cookieName, "");
+//					myCookie.setMaxAge(0);
+//					myCookie.setValue(null);
+//					
+//					// send cookie back to client
+//					response.addCookie(myCookie);
+					
+					// forward information to jsp page and display it
+			        request.getRequestDispatcher("/error.jsp").forward(request, response);
+			        return;
 				}
 			}
 
@@ -784,6 +815,43 @@ public class MyServlet extends HttpServlet
 		}
 		return false;
 	}
+	
+	private View getView(InetAddress address) {
+        try {
+			DatagramSocket rpcSocket = new DatagramSocket();
+			int newCallId = callId.getAndAdd(1);
+
+			ByteBuffer bbuf = ByteBuffer.allocate(4 + 1);
+			bbuf.putInt(newCallId);
+			bbuf.put(GETVIEW);
+			byte[] outBuf = bbuf.array();
+			DatagramPacket sendPkt = new DatagramPacket(outBuf, outBuf.length, address, PORT);
+			rpcSocket.send(sendPkt);
+			byte[] inBuf = new byte[512]; // response contains callId
+			DatagramPacket recvPkt = new DatagramPacket(inBuf, inBuf.length);
+			int recvCallId = -1;
+			do { //loop through responses
+				recvPkt.setLength(inBuf.length);
+				rpcSocket.receive(recvPkt);
+				RPCReceive(recvPkt.getAddress());
+				bbuf = ByteBuffer.wrap(inBuf);
+				recvCallId = bbuf.getInt();
+			} while(recvCallId != newCallId);
+			View recvView = new View();
+			for (int i = 4; i<recvPkt.getLength()-4; i+=4) {
+				View.insert(recvView, new String(inBuf, i, 4));
+			}
+			return recvView;
+		} catch (SocketException e) {
+			// DatagramSocket could not be opened
+			e.printStackTrace();
+		} catch (IOException e) {
+			//send failed or timeout
+			RPCtimeout(address);
+			e.printStackTrace();
+		}
+		return null;
+	}
 
 	// to be called in the MyServlet constructor
 	private void rpcServer() {
@@ -809,19 +877,18 @@ public class MyServlet extends HttpServlet
 						ByteBuffer bbuf = ByteBuffer.wrap(inBuf);
 						int cid = bbuf.getInt();
 						byte opCode = bbuf.get();
-						int sessNum = bbuf.getInt();
-						bbuf.getInt(); // increment by four bytes (the same four used to make the serverId below)
-						String serverIdAddr = new String(inBuf, 8, 4);
-						int sessionVersionNum = bbuf.getInt();
-						SessionTuple sessTup = new SessionTuple(sessNum, serverIdAddr);
-						SessionState sessState = null;
 
 						byte[] outBuf = null;
-						if (opCode == SESSIONREAD) {
-							sessState = map.get(sessTup);
-							if (sessState != null) {
-								bbuf = ByteBuffer.allocate(4 + 1 + sessState.message.length()*2);
-								bbuf.putInt(cid);
+                        if (opCode == SESSIONREAD) {
+                            int sessNum = bbuf.getInt();
+                            bbuf.getInt(); // increment by four bytes (the same four used to make the serverId below)
+                            String serverIdAddr = new String(inBuf, 8, 4);
+                            int sessionVersionNum = bbuf.getInt();
+                            SessionTuple sessTup = new SessionTuple(sessNum, serverIdAddr);
+							SessionState sessState = map.get(sessTup);
+							if (sessState != null && sessState.version==sessionVersionNum) {
+                                bbuf = ByteBuffer.allocate(4 + 1 + sessState.message.length()*2);
+                                bbuf.putInt(cid);
 								bbuf.put((byte) 1);
 								for (byte b : sessState.message.getBytes()) {
 									bbuf.put(b);
@@ -833,13 +900,27 @@ public class MyServlet extends HttpServlet
 							}
 							outBuf = bbuf.array();
 						} else if (opCode==SESSIONWRITE) {
+	                        int sessNum = bbuf.getInt();
+	                        bbuf.getInt(); // increment by four bytes (the same four used to make the serverId below)
+	                        String serverIdAddr = new String(inBuf, 8, 4);
+	                        int sessionVersionNum = bbuf.getInt();
 							long discardTime = bbuf.getLong();
 							String msg = new String(inBuf, 25, recvPkt.getLength()-25);
-							sessState = new SessionState(sessTup, sessionVersionNum, msg, discardTime);
+
+	                        SessionTuple sessTup = new SessionTuple(sessNum, serverIdAddr);
+							SessionState sessState = new SessionState(sessTup, sessionVersionNum, msg, discardTime);
 							map.put(sessTup, sessState);
 
 							bbuf = ByteBuffer.allocate(4);
 							bbuf.putInt(cid);
+							outBuf = bbuf.array();
+						} else if (opCode==GETVIEW) {
+							HashSet<String> viewips = View.getIPs(view);
+							bbuf = ByteBuffer.allocate(4 + 4*viewips.size());
+							bbuf.putInt(cid);
+							for (String s : viewips) {
+								bbuf.put(s.getBytes());
+							}
 							outBuf = bbuf.array();
 						}
 						DatagramPacket sendPkt = new DatagramPacket(outBuf, outBuf.length, returnAddr, returnPort);
@@ -945,6 +1026,18 @@ public class MyServlet extends HttpServlet
 		});
 		daemonThread.setDaemon(true);	// making this thread daemon
 		daemonThread.start();
+	}
+	
+	private String convertToReadableIP(String addr) {
+		byte[] bytes = addr.getBytes();
+		InetAddress a;
+		try {
+			a = InetAddress.getByAddress(bytes);
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return a.getHostAddress();
 	}
 
 }
