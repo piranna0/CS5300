@@ -1,5 +1,7 @@
 package myPackage;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -63,7 +65,12 @@ public class View {
 	public static String choose(View v){
 		Object[] arr = v.view.toArray();
 		if(arr.length == 0){
-			return "0.0.0.0";
+			try {
+				return MyServlet.inetaddrToString(InetAddress.getByName("0.0.0.0"));
+			} catch (UnknownHostException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		Random r = new Random();
 		int index = r.nextInt(arr.length);

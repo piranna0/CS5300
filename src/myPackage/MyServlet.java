@@ -144,7 +144,7 @@ public class MyServlet extends HttpServlet
 			while (reply == false)
 			{
 				String backup_ip = View.choose(myCopy);
-				if (backup_ip == null) 
+				if (backup_ip.equals(inetaddrToString(InetAddress.getByName("0.0.0.0")))) 
 				{
 					// nothing's in view
 					loc[1] = inetaddrToString(InetAddress.getByName("0.0.0.0"));
@@ -152,6 +152,7 @@ public class MyServlet extends HttpServlet
 				}
 				else
 				{
+					System.out.println(backup_ip);
 					reply = sessionWrite(sid, sess[1].getBytes(), ver, message, InetAddress.getByAddress(backup_ip.getBytes()));
 					if (reply == true)
 					{
@@ -220,7 +221,7 @@ public class MyServlet extends HttpServlet
 					while (reply == false)
 					{
 						String backup_ip = View.choose(myCopy);
-						if (backup_ip == null) 
+						if (backup_ip.equals(inetaddrToString(InetAddress.getByName("0.0.0.0"))))
 						{
 							// nothing's in view
 							loc[1] = inetaddrToString(InetAddress.getByName("0.0.0.0"));
@@ -311,7 +312,7 @@ public class MyServlet extends HttpServlet
 					while (rep == false)
 					{
 						String backup_ip = View.choose(myCopy);
-						if (backup_ip == null) 
+						if (backup_ip.equals(inetaddrToString(InetAddress.getByName("0.0.0.0")))) 
 						{
 							// nothing's in view
 							loc[1] = inetaddrToString(InetAddress.getByName("0.0.0.0"));
@@ -465,7 +466,7 @@ public class MyServlet extends HttpServlet
 					while (reply == false)
 					{
 						String backup_ip = View.choose(myCopy);
-						if (backup_ip == null) 
+						if (backup_ip.equals(inetaddrToString(InetAddress.getByName("0.0.0.0")))) 
 						{
 							// nothing's in view
 							loc[1] = inetaddrToString(InetAddress.getByName("0.0.0.0"));
@@ -571,7 +572,7 @@ public class MyServlet extends HttpServlet
 			while (rep == false)
 			{
 				String backup_ip = View.choose(myCopy);
-				if (backup_ip == null) 
+				if (backup_ip.equals(inetaddrToString(InetAddress.getByName("0.0.0.0")))) 
 				{
 					// nothing's in view
 					loc[1] = inetaddrToString(InetAddress.getByName("0.0.0.0"));
@@ -993,7 +994,7 @@ public class MyServlet extends HttpServlet
 		daemonThread.start();
 	}
 
-	private String inetaddrToString(InetAddress addr) {
+	static String inetaddrToString(InetAddress addr) {
 		return new String(addr.getAddress());
 	}
 
