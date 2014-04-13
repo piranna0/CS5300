@@ -43,7 +43,7 @@ public class MyServlet extends HttpServlet
 	private final byte GETVIEW = 2; //operation code
 	private final int PORT = 5300;
 	private String SvrID;
-	private static int TIMEOUT = 500;
+	private static int TIMEOUT = 100;
 
 	private static int GOSSIP_MSECS = 12000;
 	private static int BOOTSTRAP_MSECS = 12000;
