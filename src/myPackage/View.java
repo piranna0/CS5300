@@ -83,4 +83,12 @@ public class View {
 	public static HashSet<String> getIPs(View v){
 		return v.view;
 	}
+	
+	public String toString(){
+		String str = "";
+		for(String s : view){
+			str += ViewDB.convertToReadableIP(s);
+		}
+		return view.toString();
+	}
 }
