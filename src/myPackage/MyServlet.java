@@ -171,7 +171,7 @@ public class MyServlet extends HttpServlet
 					// choose a backup server from view and call SessionWrite()
 					// TODO: debug dis
 					boolean reply = false;
-					View myCopy = View.copy(myView);
+					View myCopy = View.copy(view);
 					while (reply == false)
 					{
 						String backup_ip = View.choose(myCopy);
@@ -254,7 +254,7 @@ public class MyServlet extends HttpServlet
 					// choose a backup server from view and call SessionWrite()
 					// TODO: debug dis
 					boolean rep = false;
-					View myCopy = View.copy(myView);
+					View myCopy = View.copy(view);
 					while (rep == false)
 					{
 						String backup_ip = View.choose(myCopy);
