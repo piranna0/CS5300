@@ -83,7 +83,7 @@ public class ViewDB {
 			for(Attribute attr : item.getAttributes()){
 				if(attr.getName().equals(IPAttribute)){
 					View.insert(v, attr.getValue());
-//					System.out.println("attr: " + convertToReadableIP(attr.getValue()));
+					System.out.println("attr: " + convertToReadableIP(attr.getValue()));
 					break;
 				}
 			}

@@ -1020,6 +1020,7 @@ public class MyServlet extends HttpServlet
 				while(true)
 				{
 					View temp = ViewDB.readSDBView();
+					System.out.println("bootstrap bill");
 					View.remove(temp, SvrID);
 					View.union(temp, view);
 					View.shrink(temp, ViewSz);
