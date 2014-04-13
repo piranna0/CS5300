@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.Cookie;
@@ -98,6 +99,7 @@ public class MyServlet extends HttpServlet
 		}
 
 		garbageCollector(); 
+		ViewDB.init();
 		rpcServer();
 		bootstrap();
 		gossip();
@@ -984,7 +986,12 @@ public class MyServlet extends HttpServlet
 						else
 						{
 							//		TODO: Need RPC call for GetView written
-							//		View temp = GetView(addr);
+							try {
+								temp = getView(InetAddress.getByName(ip));
+							} catch (UnknownHostException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
 						}
 					}
 					View.union(temp, view);
@@ -992,9 +999,9 @@ public class MyServlet extends HttpServlet
 					View.shrink(temp, ViewSz);
 					view = temp;
 					try {
-						Thread.sleep((GOSSIP_MSECS/2) + generator.nextInt(GOSSIP_MSECS));		// 10 seconds
+						Thread.sleep((GOSSIP_MSECS/2) + generator.nextInt(GOSSIP_MSECS));
 					} catch (InterruptedException e) {
-						Thread.currentThread().interrupt();		// restore interrupted status
+						Thread.currentThread().interrupt();
 					}
 				}
 			}
@@ -1021,9 +1028,9 @@ public class MyServlet extends HttpServlet
 					View.shrink(temp, ViewSz);
 					ViewDB.writeSDBView(temp);
 					try {
-						Thread.sleep(BOOTSTRAP_MSECS);		// 10 seconds
+						Thread.sleep(BOOTSTRAP_MSECS);
 					} catch (InterruptedException e) {
-						Thread.currentThread().interrupt();		// restore interrupted status
+						Thread.currentThread().interrupt();
 					}
 				}
 			}
@@ -1037,11 +1044,12 @@ public class MyServlet extends HttpServlet
 		InetAddress a = null;
 		try {
 			a = InetAddress.getByAddress(bytes);
+			return a.getHostAddress();
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return a.getHostAddress();
+		return null;
 	}
 
 }

@@ -1,6 +1,8 @@
 package myPackage;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -38,18 +40,35 @@ public class ViewDB {
 		}
 		
 		
-		View v = new View();
-		HashSet<String> arr = new HashSet<String>();
-		View.insert(v, "1.1.1.1");
-		View.insert(v, "1.1.1.2");
-		writeSDBView(v);
+//		View v = new View();
+//		HashSet<String> arr = new HashSet<String>();
+//		View.insert(v, "1.1.1.1");
+//		View.insert(v, "1.1.1.2");
+//		writeSDBView(v);
+//		try {
+//			Thread.sleep(3000);
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+		readSDBView();
+	}
+	
+	public static void init(){
 		try {
-			Thread.sleep(3000);
-		} catch (InterruptedException e) {
+			sdb = new AmazonSimpleDBClient(new PropertiesCredentials(
+					ViewDB.class.getResourceAsStream("AwsCredentials.properties")));
+			System.out.println(sdb.listDomains());
+			
+			//If sdb doesn't exist somehow
+			if(!sdb.listDomains().getDomainNames().contains(myDomain)){
+				sdb.createDomain(new CreateDomainRequest(myDomain));
+			}
+			
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		readSDBView();
 	}
 	
 	public static View readSDBView(){
@@ -57,17 +76,33 @@ public class ViewDB {
 		SelectRequest req = new SelectRequest(selectExpression);
 		
 		View v = new View();
-		
+		SelectResult sr = sdb.select(req);
+		if(sr == null)return v;
 		//Get ip addresses stored in SimpleDB
-		for(Item item : sdb.select(req).getItems()){
+		for(Item item : sr.getItems()){
 			for(Attribute attr : item.getAttributes()){
 				if(attr.getName().equals(IPAttribute)){
 					View.insert(v, attr.getValue());
+//					System.out.println("attr: " + convertToReadableIP(attr.getValue()));
 					break;
 				}
 			}
 		}
 		return v;
+	}
+	
+	//For testing readSDBView only
+	private static String convertToReadableIP(String addr) {
+		byte[] bytes = addr.getBytes();
+		InetAddress a;
+		try {
+			a = InetAddress.getByAddress(bytes);
+			return a.getHostAddress();
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
 	}
 	
 	//Takes two parameters:
