@@ -1033,11 +1033,12 @@ public class MyServlet extends HttpServlet
 		InetAddress a;
 		try {
 			a = InetAddress.getByAddress(bytes);
+			return a.getHostAddress();
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		return a.getHostAddress();
+		return null;
 	}
 
 }
