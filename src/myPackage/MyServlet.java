@@ -981,13 +981,15 @@ public class MyServlet extends HttpServlet
 						{
 							//		TODO: Need RPC call for GetView written
 							try {
-								temp = getView(InetAddress.getByName(ip));
+								temp = getView(InetAddress.getByAddress(ip.getBytes()));
 							} catch (UnknownHostException e) {
 								// TODO Auto-generated catch block
 								e.printStackTrace();
 							}
 						}
 					}
+					System.out.println("Gossip temp: " + temp);
+					System.out.println("Gossip view: " + view);
 					View.union(temp, view);
 					View.remove(temp, SvrID);
 					View.shrink(temp, ViewSz);
@@ -1014,7 +1016,8 @@ public class MyServlet extends HttpServlet
 				while(true)
 				{
 					View temp = ViewDB.readSDBView();
-					System.out.println("bootstrap bill");
+					System.out.println("BootStrap temp: " + temp);
+					System.out.println("BootStrap view: " + view);
 					View.remove(temp, SvrID);
 					View.union(temp, view);
 					View.shrink(temp, ViewSz);

@@ -22,8 +22,8 @@ public class ViewDB {
 	static String IPAttribute = "IP";
 	static String sizeAttribute = "Size";
 	public static void main(String[] args){
-		
-		
+//		
+//		
 		try {
 			sdb = new AmazonSimpleDBClient(new PropertiesCredentials(
 					ViewDB.class.getResourceAsStream("AwsCredentials.properties")));
@@ -38,20 +38,32 @@ public class ViewDB {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
-		
-//		View v = new View();
-//		HashSet<String> arr = new HashSet<String>();
-//		View.insert(v, "1.1.1.1");
-//		View.insert(v, "1.1.1.2");
-//		writeSDBView(v);
+//		
+//		
+////		View v = new View();
+////		HashSet<String> arr = new HashSet<String>();
+////		View.insert(v, "1.1.1.1");
+////		View.insert(v, "1.1.1.2");
+////		writeSDBView(v);
+////		try {
+////			Thread.sleep(3000);
+////		} catch (InterruptedException e) {
+////			// TODO Auto-generated catch block
+////			e.printStackTrace();
+////		}
+		readSDBView();
 //		try {
-//			Thread.sleep(3000);
-//		} catch (InterruptedException e) {
+//			System.out.println(inetaddrToString(InetAddress.getLocalHost()));
+//			System.out.println(convertToReadableIP(inetaddrToString(InetAddress.getLocalHost())));
+//			System.out.println(InetAddress.getByAddress(inetaddrToString(InetAddress.getLocalHost()).getBytes()).getHostAddress());
+//		} catch (UnknownHostException e) {
 //			// TODO Auto-generated catch block
 //			e.printStackTrace();
 //		}
-		readSDBView();
+	}
+	
+	private static String inetaddrToString(InetAddress addr) {
+		return new String(addr.getAddress());
 	}
 	
 	public static void init(){
@@ -82,8 +94,13 @@ public class ViewDB {
 		for(Item item : sr.getItems()){
 			for(Attribute attr : item.getAttributes()){
 				if(attr.getName().equals(IPAttribute)){
-					View.insert(v, attr.getValue());
-					System.out.println("attr: " + convertToReadableIP(attr.getValue()));
+					try {
+						View.insert(v, inetaddrToString(InetAddress.getByName(attr.getValue())));
+					} catch (UnknownHostException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					System.out.println("attr:" + attr.getValue());
 					break;
 				}
 			}
@@ -92,7 +109,7 @@ public class ViewDB {
 	}
 	
 	//For testing readSDBView only
-	private static String convertToReadableIP(String addr) {
+	public static String convertToReadableIP(String addr) {
 		byte[] bytes = addr.getBytes();
 		InetAddress a;
 		try {
@@ -114,10 +131,11 @@ public class ViewDB {
 		HashSet<String> ips = View.getIPs(v);
 		//Replace previous attributes with new IP addresses
 		for(String ip : ips){
+			System.out.println("WRITE: " + ip);
 			ReplaceableAttribute replaceAttributeType = new ReplaceableAttribute().withName(typeAttribute).
 					withValue(serverType).withReplace(true);
 			ReplaceableAttribute replaceAttribute = new ReplaceableAttribute().withName(IPAttribute).
-					withValue(ip).withReplace(true);
+					withValue(convertToReadableIP(ip)).withReplace(true);
 			
 			sdb.putAttributes(new PutAttributesRequest().withDomainName(myDomain).withItemName(myItem + i)
 					.withAttributes(replaceAttributeType, replaceAttribute));
@@ -149,7 +167,7 @@ public class ViewDB {
 		i++;//Delete all items after size item
 		
 		//Delete extra attributes
-		for(; i < size; i++){
+		for(; i < size+1; i++){
 			sdb.deleteAttributes(new DeleteAttributesRequest(myDomain, myItem + i));
 		}
 	}
