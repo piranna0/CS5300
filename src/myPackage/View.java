@@ -33,6 +33,9 @@ public class View {
 	
 	public static String choose(View v){
 		Object[] arr = v.view.toArray();
+		if(arr.length == 0){
+			return null;
+		}
 		Random r = new Random();
 		int index = r.nextInt(arr.length);
 		return (String) arr[index];
