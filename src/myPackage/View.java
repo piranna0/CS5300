@@ -87,7 +87,8 @@ public class View {
 	public String toString(){
 		String str = "";
 		for(String s : view){
-			str += ViewDB.convertToReadableIP(s);
+			if (!s.equals(null))
+				str += ViewDB.convertToReadableIP(s) + ", ";
 		}
 		return str;
 	}
