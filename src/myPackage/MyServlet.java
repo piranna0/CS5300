@@ -718,8 +718,8 @@ public class MyServlet extends HttpServlet
 	private String concatPrint(String[] sess, int ver, String[] loc) {
 		return sess[0] + "_" + convertToReadableIP(sess[1]) + "_" + 
 				String.valueOf(ver) + "_" + 
-				//convertToReadableIP(loc[0]) + "_" + convertToReadableIP(loc[1]);
-				convertToReadableIP(loc[0]) + "_" + loc[1];
+				convertToReadableIP(loc[0]) + "_" + convertToReadableIP(loc[1]);
+				//convertToReadableIP(loc[0]) + "_" + loc[1];
 	}
 
 	// running on local tomcat
@@ -1080,6 +1080,10 @@ public class MyServlet extends HttpServlet
 	}
 	
 	private String convertToReadableIP(String addr) {
+		if (addr == null)
+		{
+			return "null";
+		}
 		byte[] bytes = addr.getBytes();
 		InetAddress a = null;
 		try {
