@@ -42,7 +42,6 @@ public class ViewDB {
 		HashSet<String> arr = new HashSet<String>();
 		View.insert(v, "1.1.1.1");
 		View.insert(v, "1.1.1.2");
-		View.insert(v, "1.1.1.3");
 		writeSDBView(v);
 		try {
 			Thread.sleep(3000);
@@ -63,8 +62,6 @@ public class ViewDB {
 		for(Item item : sdb.select(req).getItems()){
 			for(Attribute attr : item.getAttributes()){
 				if(attr.getName().equals(IPAttribute)){
-					System.out.println(attr.getName());
-					System.out.println(attr.getValue());
 					View.insert(v, attr.getValue());
 					break;
 				}
