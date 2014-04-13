@@ -32,7 +32,6 @@ public class MyServlet extends HttpServlet
 	private String cookieName = "CS5300PROJ1SESSION";
 	public static int SESSION_TIMEOUT_SECS = 15;
 	public static int DISCARD_TIME_DELTA = 1;
-	private final String location = "0";
 	private static AtomicInteger callId = new AtomicInteger();
 	private final byte SESSIONREAD = 0; // operation code
 	private final byte SESSIONWRITE = 1; // operation code
@@ -92,6 +91,7 @@ public class MyServlet extends HttpServlet
 		}
         
         garbageCollector();   
+        rpcServer();
     }
 
 	/**
@@ -717,7 +717,12 @@ public class MyServlet extends HttpServlet
 				bbuf = ByteBuffer.wrap(inBuf);
 				recvCallId = bbuf.getInt();
 			} while(recvCallId != cid);
-			return new String(inBuf, 4, recvPkt.getLength()-4);
+			byte success = bbuf.get();
+			if (success==1) {
+                return new String(inBuf, 5, recvPkt.getLength()-5);
+			} else {
+				return null;
+			}
 		} catch (IOException e) {
 			//send failed or timeout
 			e.printStackTrace();
@@ -795,7 +800,7 @@ public class MyServlet extends HttpServlet
 
 						ByteBuffer bbuf = ByteBuffer.wrap(inBuf);
 						int cid = bbuf.getInt();
-						byte code = bbuf.get();
+						byte opCode = bbuf.get();
                         int sessNum = bbuf.getInt();
                         bbuf.getInt(); // increment by four bytes (the same four used to make the serverId below)
                         String serverIdAddr = new String(inBuf, 8, 4);
@@ -804,16 +809,22 @@ public class MyServlet extends HttpServlet
                         SessionState sessState = null;
 
 						byte[] outBuf = null;
-						switch (code) {
-						case SESSIONREAD:
+						if (opCode == SESSIONREAD) {
 							sessState = map.get(sessTup);
-							bbuf = ByteBuffer.allocate(4 + sessState.message.length()*2);
-							bbuf.putInt(cid);
-							for (byte b : sessState.message.getBytes()) {
-								bbuf.put(b);
+							if (sessState != null) {
+                                bbuf = ByteBuffer.allocate(4 + 1 + sessState.message.length()*2);
+                                bbuf.putInt(cid);
+								bbuf.put((byte) 1);
+                                for (byte b : sessState.message.getBytes()) {
+                                        bbuf.put(b);
+                                }
+							} else {
+                                bbuf = ByteBuffer.allocate(4 + 1);
+                                bbuf.putInt(cid);
+								bbuf.put((byte) 0);
 							}
 							outBuf = bbuf.array();
-						case SESSIONWRITE:
+						} else if (opCode==SESSIONWRITE) {
 							long discardTime = bbuf.getLong();
 							String msg = new String(inBuf, 25, recvPkt.getLength()-25);
 							sessState = new SessionState(sessTup, sessionVersionNum, msg, discardTime);
