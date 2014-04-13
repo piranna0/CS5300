@@ -10,11 +10,8 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.Cookie;
@@ -148,11 +145,6 @@ public class MyServlet extends HttpServlet
 						loc[1] = backup_ip;
 						break;
 					}
-					else
-					{
-						// remove the invalid ip from view
-						View.remove(myCopy, backup_ip);
-					}
 				}
 			}
 
@@ -221,11 +213,6 @@ public class MyServlet extends HttpServlet
 							{
 								loc[1] = backup_ip;
 								break;
-							}
-							else
-							{
-								// remove the invalid ip from view
-								View.remove(myCopy, backup_ip);
 							}
 						}
 					}
@@ -304,11 +291,6 @@ public class MyServlet extends HttpServlet
 							{
 								loc[1] = backup_ip;
 								break;
-							}
-							else
-							{
-								// remove the invalid ip from view
-								View.remove(myCopy, backup_ip);
 							}
 						}
 					}
@@ -445,11 +427,6 @@ public class MyServlet extends HttpServlet
 								loc[1] = backup_ip;
 								break;
 							}
-							else
-							{
-								// remove the invalid ip from view
-								View.remove(myCopy, backup_ip);
-							}
 						}
 					}
 
@@ -542,11 +519,6 @@ public class MyServlet extends HttpServlet
 					{
 						loc[1] = backup_ip;
 						break;
-					}
-					else
-					{
-						// remove the invalid ip from view
-						View.remove(myCopy, backup_ip);
 					}
 				}
 			}
@@ -741,6 +713,7 @@ public class MyServlet extends HttpServlet
 			do {
 				recvPkt.setLength(inBuf.length);
 				socket.receive(recvPkt);
+				RPCReceive(recvPkt.getAddress());
 				bbuf = ByteBuffer.wrap(inBuf);
 				recvCallId = bbuf.getInt();
 			} while(recvCallId != cid);
@@ -748,6 +721,7 @@ public class MyServlet extends HttpServlet
 		} catch (IOException e) {
 			//send failed or timeout
 			e.printStackTrace();
+			RPCtimeout(address[index]);
 			return sessionReadHelper(cid, socket, outBuf, address, index+1);
 		}
 	}
@@ -782,15 +756,17 @@ public class MyServlet extends HttpServlet
             do { //loop through responses
                 recvPkt.setLength(inBuf.length);
                 rpcSocket.receive(recvPkt);
+                RPCReceive(recvPkt.getAddress());
                 bbuf = ByteBuffer.wrap(inBuf);
                 recvCallId = bbuf.getInt();
             } while(recvCallId != newCallId);
-        return true;
+            return true;
 		} catch (SocketException e) {
 			// DatagramSocket could not be opened
 			e.printStackTrace();
         } catch (IOException e) {
             //send failed or timeout
+        	RPCtimeout(address);
             e.printStackTrace();
         }
 		return false;
@@ -806,9 +782,14 @@ public class MyServlet extends HttpServlet
 	                DatagramSocket rpcSocket = new DatagramSocket(PORT);
 					while(true)
 					{
-						byte[] inBuf = new byte[512]; //BYTE LENGTH?!?!
+						byte[] inBuf = new byte[512];
 						DatagramPacket recvPkt = new DatagramPacket(inBuf, inBuf.length);
-						rpcSocket.receive(recvPkt);
+						try {
+							rpcSocket.receive(recvPkt);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+						RPCReceive(recvPkt.getAddress());
 						InetAddress returnAddr = recvPkt.getAddress();
 						int returnPort = recvPkt.getPort();
 
@@ -843,13 +824,15 @@ public class MyServlet extends HttpServlet
 							outBuf = bbuf.array();
 						}
 						DatagramPacket sendPkt = new DatagramPacket(outBuf, outBuf.length, returnAddr, returnPort);
-						rpcSocket.send(sendPkt);
+						try {
+							rpcSocket.send(sendPkt);
+						} catch (IOException e) {
+							RPCtimeout(returnAddr);
+							e.printStackTrace();
+						}
 					}
 				} catch (SocketException e) {
 					// DatagramSocket could not be opened
-					e.printStackTrace();
-				} catch (IOException e) {
-					// error receiving packet
 					e.printStackTrace();
 				}
 			}
