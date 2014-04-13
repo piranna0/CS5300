@@ -769,7 +769,9 @@ public class MyServlet extends HttpServlet
 			}
 			bbuf.putInt(sessVersionNum);
 			byte[] outBuf = bbuf.array();
-			return sessionReadHelper(newCallId, rpcSocket, outBuf, address, 0);
+			String ret = sessionReadHelper(newCallId, rpcSocket, outBuf, address, 0);
+			rpcSocket.close();
+			return ret;
 		} catch (SocketException e) {
 			// DatagramSocket could not be opened
 			e.printStackTrace();
