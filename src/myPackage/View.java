@@ -89,6 +89,6 @@ public class View {
 		for(String s : view){
 			str += ViewDB.convertToReadableIP(s);
 		}
-		return view.toString();
+		return str;
 	}
 }
