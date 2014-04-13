@@ -82,7 +82,7 @@ public class MyServlet extends HttpServlet
     public MyServlet() {
         super();
         
-        garbageCollector();   
+        garbageCollector();
     }
 
 	/**
@@ -158,11 +158,35 @@ public class MyServlet extends HttpServlet
 					long curTime = System.currentTimeMillis() / 1000;
 					timeout = curTime + SESSION_TIMEOUT_SECS;
 					loc[0] = getIP().getHostAddress();
-					// choose a backup server
-					// TODO: call SessionWrite() to backup server and wait for successful response
-					// if (fail) { loc[1] = null; }
-					// else { loc[1] = // TODO: backup server - choose at random from local server's view }
-					loc[1] = getLoc(myCookie)[1];
+					
+					// choose a backup server from view and call SessionWrite()
+					// TODO: debug dis
+					boolean reply = false;
+					View myCopy = View.copy(myView);
+					while (reply == false)
+					{
+						String backup_ip = View.choose(myCopy);
+						if (backup_ip == null) 
+						{
+							// nothing's in view
+							loc[1] = null;
+							break;
+						}
+						else 
+						{
+							reply = sessionWrite(sid, sess[1].getBytes(), ver, message, InetAddress.getByAddress(backup_ip.getBytes()));
+							if (reply == true)
+							{
+								loc[1] = backup_ip;
+								break;
+							}
+							else
+							{
+								// remove the invalid ip from view
+								View.remove(myCopy, backup_ip);
+							}
+						}
+					}
 					value = concatValue(sess, ver, loc);
 					
 					// store updated info to map (choose primary server)
@@ -217,11 +241,35 @@ public class MyServlet extends HttpServlet
 					long curTime = System.currentTimeMillis() / 1000;
 					timeout = curTime + SESSION_TIMEOUT_SECS;
 					loc[0] = getIP().getHostAddress();
-					// choose a backup server
-					// TODO: call SessionWrite() to backup server and wait for successful response
-					// if (fail) { loc[1] = null; }
-					// else { loc[1] = // TODO: backup server - choose at random from local server's view }
-					loc[1] = getLoc(myCookie)[1];
+					
+					// choose a backup server from view and call SessionWrite()
+					// TODO: debug dis
+					boolean rep = false;
+					View myCopy = View.copy(myView);
+					while (rep == false)
+					{
+						String backup_ip = View.choose(myCopy);
+						if (backup_ip == null) 
+						{
+							// nothing's in view
+							loc[1] = null;
+							break;
+						}
+						else 
+						{
+							rep = sessionWrite(sessNum, servNum, ver, message, InetAddress.getByAddress(backup_ip.getBytes()));
+							if (rep == true)
+							{
+								loc[1] = backup_ip;
+								break;
+							}
+							else
+							{
+								// remove the invalid ip from view
+								View.remove(myCopy, backup_ip);
+							}
+						}
+					}
 					value = concatValue(sess, ver, loc);
 					
 					// store updated info to map (choose primary server)
@@ -261,7 +309,6 @@ public class MyServlet extends HttpServlet
 		// in the case of time-out, redirect to time-out page
 		if (myCookie == null)
 		{
-			java.util.Set<Integer> blah2 = map.keySet();
 			request.getRequestDispatcher("/timeout.jsp").forward(request, response);
 			return;
 		}
