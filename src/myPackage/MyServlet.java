@@ -15,7 +15,6 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.Cookie;
@@ -98,8 +97,10 @@ public class MyServlet extends HttpServlet
 			e.printStackTrace();
 		}
 
-        garbageCollector();   
-        rpcServer();
+		garbageCollector(); 
+		rpcServer();
+		bootstrap();
+		gossip();
 	}
 
 	/**
@@ -266,7 +267,16 @@ public class MyServlet extends HttpServlet
 				String reply = sessionRead(sessNum, servNum, verNum, inetLocs);
 				if (reply == null)
 				{
-					request.getRequestDispatcher("/error.jsp").forward(request, response);
+//					// send a dead cookie
+//					Cookie myDeadCookie = new Cookie(cookieName, "");
+//					myDeadCookie.setMaxAge(0);
+//					myDeadCookie.setValue(null);
+//					
+//					// send cookie back to client
+//					response.addCookie(myDeadCookie);
+					
+					// forward information to jsp page and display it
+			        request.getRequestDispatcher("/error.jsp").forward(request, response);
 				}
 				else
 				{
@@ -342,7 +352,17 @@ public class MyServlet extends HttpServlet
 		// in the case of time-out, redirect to time-out page
 		if (myCookie == null)
 		{
+//			// send a dead cookie
+//			Cookie myDeadCookie = new Cookie(cookieName, "");
+//			myDeadCookie.setMaxAge(0);
+//			myDeadCookie.setValue(null);
+//			
+//			// send cookie back to client
+//			response.addCookie(myDeadCookie);
+			
+			// forward information to jsp page and display it
 			request.getRequestDispatcher("/timeout.jsp").forward(request, response);
+			
 			return;
 		}
 
@@ -484,8 +504,17 @@ public class MyServlet extends HttpServlet
 				reply = sessionRead(sessNum, servNum, verNum, inetLocs);
 				if (reply == null)
 				{
-					request.getRequestDispatcher("/error.jsp").forward(request, response);
-					return;
+//					// send a dead cookie
+//					myCookie = new Cookie(cookieName, "");
+//					myCookie.setMaxAge(0);
+//					myCookie.setValue(null);
+//					
+//					// send cookie back to client
+//					response.addCookie(myCookie);
+					
+					// forward information to jsp page and display it
+			        request.getRequestDispatcher("/error.jsp").forward(request, response);
+			        return;
 				}
 			}
 
@@ -727,7 +756,7 @@ public class MyServlet extends HttpServlet
 			} while(recvCallId != cid);
 			byte success = bbuf.get();
 			if (success==1) {
-                return new String(inBuf, 5, recvPkt.getLength()-5);
+				return new String(inBuf, 5, recvPkt.getLength()-5);
 			} else {
 				return null;
 			}
@@ -859,12 +888,12 @@ public class MyServlet extends HttpServlet
                                 bbuf = ByteBuffer.allocate(4 + 1 + sessState.message.length()*2);
                                 bbuf.putInt(cid);
 								bbuf.put((byte) 1);
-                                for (byte b : sessState.message.getBytes()) {
-                                        bbuf.put(b);
-                                }
+								for (byte b : sessState.message.getBytes()) {
+									bbuf.put(b);
+								}
 							} else {
-                                bbuf = ByteBuffer.allocate(4 + 1);
-                                bbuf.putInt(cid);
+								bbuf = ByteBuffer.allocate(4 + 1);
+								bbuf.putInt(cid);
 								bbuf.put((byte) 0);
 							}
 							outBuf = bbuf.array();
@@ -926,18 +955,32 @@ public class MyServlet extends HttpServlet
 	}
 
 	//Gossip Protocol Method
-	public void gossip(InetAddress addr){
+	public void gossip(){
 		Thread daemonThread = new Thread(new Runnable()
 		{
 			@Override
 			public void run()
 			{
 				Random generator = new Random();
+				View temp;
 				while(true)
 				{
-					//		TODO: Need RPC call for GetView written
-					//		View temp = GetView(addr);
-					View temp = new View();
+					temp = null;
+					while (temp == null)
+					{
+						String ip = View.choose(view);
+						if (ip == null) 
+						{
+							// nothing's in view
+							temp = new View();
+							break;
+						}
+						else
+						{
+							//		TODO: Need RPC call for GetView written
+							//		View temp = GetView(addr);
+						}
+					}
 					View.union(temp, view);
 					View.remove(temp, SvrID);
 					View.shrink(temp, ViewSz);
