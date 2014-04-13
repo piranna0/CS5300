@@ -988,9 +988,9 @@ public class MyServlet extends HttpServlet
 					View.shrink(temp, ViewSz);
 					view = temp;
 					try {
-						Thread.sleep((GOSSIP_MSECS/2) + generator.nextInt(GOSSIP_MSECS));		// 10 seconds
+						Thread.sleep((GOSSIP_MSECS/2) + generator.nextInt(GOSSIP_MSECS));
 					} catch (InterruptedException e) {
-						Thread.currentThread().interrupt();		// restore interrupted status
+						Thread.currentThread().interrupt();
 					}
 				}
 			}
@@ -1017,9 +1017,9 @@ public class MyServlet extends HttpServlet
 					View.shrink(temp, ViewSz);
 					ViewDB.writeSDBView(temp);
 					try {
-						Thread.sleep(BOOTSTRAP_MSECS);		// 10 seconds
+						Thread.sleep(BOOTSTRAP_MSECS);
 					} catch (InterruptedException e) {
-						Thread.currentThread().interrupt();		// restore interrupted status
+						Thread.currentThread().interrupt();
 					}
 				}
 			}
