@@ -14,7 +14,7 @@ import com.amazonaws.services.simpledb.model.*;
 
 public class ViewDB {
 	static AmazonSimpleDB sdb;
-	static String myDomain = "Proj1b";
+	static String myDomain = "Proj1bJimmy";
 	static String myItem = "Server";
 
 	static String typeAttribute = "Type";
@@ -121,18 +121,18 @@ public class ViewDB {
 	}
 
 	//For testing readSDBView only
-//	public static String convertToReadableIP(String addr) {
-//		byte[] bytes = addr.getBytes();
-//		InetAddress a;
-//		try {
-//			a = InetAddress.getByAddress(bytes);
-//			return a.getHostAddress();
-//		} catch (UnknownHostException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		return null;
-//	}
+	//	public static String convertToReadableIP(String addr) {
+	//		byte[] bytes = addr.getBytes();
+	//		InetAddress a;
+	//		try {
+	//			a = InetAddress.getByAddress(bytes);
+	//			return a.getHostAddress();
+	//		} catch (UnknownHostException e) {
+	//			// TODO Auto-generated catch block
+	//			e.printStackTrace();
+	//		}
+	//		return null;
+	//	}
 
 	/*
 	 * TODO: Change Write so that it always writes ViewSz elements and then size. The deleting part scares me a little with concurrent accesses
@@ -148,21 +148,28 @@ public class ViewDB {
 		HashSet<String> ips = View.getIPs(v);
 		//Replace previous attributes with new IP addresses
 		for(String ip : ips){
-			String readableIP = ip;
-			ReplaceableAttribute replaceAttributeType = new ReplaceableAttribute().withName(typeAttribute).
-					withValue(serverType).withReplace(true);
-			ReplaceableAttribute replaceAttribute = new ReplaceableAttribute().withName(IPAttribute).
-					withValue(readableIP).withReplace(true);
-			ReplaceableAttribute replaceAttributeIndex = new ReplaceableAttribute().withName(indexAttribute).
-					withValue(Integer.toString(i)).withReplace(true);
+			try {
+				InetAddress s = InetAddress.getByName(ip);
+				if(!s.isLoopbackAddress()){
+					String readableIP = ip;
+					ReplaceableAttribute replaceAttributeType = new ReplaceableAttribute().withName(typeAttribute).
+							withValue(serverType).withReplace(true);
+					ReplaceableAttribute replaceAttribute = new ReplaceableAttribute().withName(IPAttribute).
+							withValue(readableIP).withReplace(true);
+					ReplaceableAttribute replaceAttributeIndex = new ReplaceableAttribute().withName(indexAttribute).
+							withValue(Integer.toString(i)).withReplace(true);
 
-			String validValue = (readableIP.equals("0.0.0.0")) ? falseValue : trueValue;
-			ReplaceableAttribute replaceAttributeValid = new ReplaceableAttribute().withName(validAttribute).
-					withValue(validValue).withReplace(true);
+					String validValue = (readableIP.equals("0.0.0.0")) ? falseValue : trueValue;
+					ReplaceableAttribute replaceAttributeValid = new ReplaceableAttribute().withName(validAttribute).
+							withValue(validValue).withReplace(true);
 
-			sdb.putAttributes(new PutAttributesRequest().withDomainName(myDomain).withItemName(myItem + i)
-					.withAttributes(replaceAttributeType, replaceAttribute, replaceAttributeIndex, replaceAttributeValid));
-			i++;
+					sdb.putAttributes(new PutAttributesRequest().withDomainName(myDomain).withItemName(myItem + i)
+							.withAttributes(replaceAttributeType, replaceAttribute, replaceAttributeIndex, replaceAttributeValid));
+					i++;
+				}
+			} catch (UnknownHostException e) {
+				// TODO Auto-generated catch block
+			}
 		}
 
 		for(; i < ViewSz; i++){
