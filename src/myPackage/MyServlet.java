@@ -11,6 +11,7 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.net.UnknownHostException;
 import java.util.HashMap;
@@ -798,21 +799,21 @@ public class MyServlet extends HttpServlet
 	// give an array of addresses and ports from which to read (returns the first result)
 	// returns a String containing the message (if null, error was encountered)
 	private String sessionRead(
-			int sessNum, byte[] serverId , int sessVersionNum, 
+			int sessNum, String serverId , int sessVersionNum, 
 			InetAddress[] address) {
 		try {
 			DatagramSocket rpcSocket = new DatagramSocket();
 			rpcSocket.setSoTimeout(TIMEOUT);
 			int newCallId = callId.getAndAdd(1);
 
-			ByteBuffer bbuf = ByteBuffer.allocate(17); //4 ints + 1 byte
+			ByteBuffer bbuf = ByteBuffer.allocate(3*3 + 1 + 2*serverId.length()); //3 ints + 1 byte + 1 string
 			bbuf.putInt(newCallId);
 			bbuf.put(SESSIONREAD);
 			bbuf.putInt(sessNum);
-			for (byte b : serverId) {
+			bbuf.putInt(sessVersionNum);
+			for (byte b : serverId.getBytes()) {
 				bbuf.put(b);
 			}
-			bbuf.putInt(sessVersionNum);
 			byte[] outBuf = bbuf.array();
 			String ret = sessionReadHelper(newCallId, rpcSocket, outBuf, address, 0);
 			rpcSocket.close();
@@ -864,21 +865,22 @@ public class MyServlet extends HttpServlet
 	// sessionWrite to one remote server
 	// returns whether the call was successful
 	private boolean sessionWrite(
-			int sessNum, byte[] serverId, int sessVersionNum, 
+			int sessNum, String serverId, int sessVersionNum, 
 			String msg, InetAddress address) {
 		try {
 			DatagramSocket rpcSocket = new DatagramSocket();
 			rpcSocket.setSoTimeout(TIMEOUT);
 			int newCallId = callId.getAndAdd(1);
 
-			ByteBuffer bbuf = ByteBuffer.allocate(4*4 + 8 + 1 + 2*msg.length()); //5 ints + 1 byte + string
+			ByteBuffer bbuf = ByteBuffer.allocate(3*4 + 8 + 1 + 2*serverId.length() + 2 + 2*msg.length()); //3 ints + long + byte + string + char + string
 			bbuf.putInt(newCallId);
 			bbuf.put(SESSIONWRITE);
 			bbuf.putInt(sessNum);
-			for (byte b : serverId) {
+			bbuf.putInt(sessVersionNum);
+			for (byte b : serverId.getBytes()) {
 				bbuf.put(b);
 			}
-			bbuf.putInt(sessVersionNum);
+			bbuf.putChar('_');
 			bbuf.putLong((System.currentTimeMillis()/1000) + DISCARD_TIME_DELTA + SESSION_TIMEOUT_SECS);
 			for (byte b : msg.getBytes()) {
 				bbuf.put(b);
@@ -935,12 +937,32 @@ public class MyServlet extends HttpServlet
 				recvCallId = bbuf.getInt();
 			} while(recvCallId != newCallId);
 			View recvView = new View();
-			for (int i = 4; i<recvPkt.getLength()-4; i+=4) {
-				if (inBuf[i]==0 && inBuf[i+1]==0 && inBuf[i+2]==0 && inBuf[i+3]==0) {
-					break;
+
+			while (true) {
+				StringBuffer stringbuf = new StringBuffer();
+				try {
+					char c = bbuf.getChar();
+					boolean zero = true;
+					while (c!='_') {
+						zero = zero && (c==0);
+						stringbuf.append(c);
+						bbuf.getChar();
+					}
+					if (zero) { // we are reading all zeros
+						break;
+					}
+					View.insert(recvView, stringbuf.toString());
+				} catch (BufferUnderflowException e) {
+					break; // no more bytes left
 				}
-				View.insert(recvView, new String(inBuf, i, 4));
 			}
+				
+//			for (int i = 4; i<recvPkt.getLength()-4; i+=4) {
+//				if (inBuf[i]==0 && inBuf[i+1]==0 && inBuf[i+2]==0 && inBuf[i+3]==0) {
+//					break;
+//				}
+//				View.insert(recvView, new String(inBuf, i, 4));
+//			}
 			rpcSocket.close();
 			return recvView;
 		} catch (SocketException e) {
@@ -985,9 +1007,15 @@ public class MyServlet extends HttpServlet
 						byte[] outBuf = null;
 						if (opCode == SESSIONREAD) {
 							int sessNum = bbuf.getInt();
-							bbuf.getInt(); // increment by four bytes (the same four used to make the serverId below)
-							String serverIdAddr = new String(inBuf, 8, 4);
+//							bbuf.getInt(); // increment by four bytes (the same four used to make the serverId below)
 							int sessionVersionNum = bbuf.getInt();
+							StringBuffer stringbuf = new StringBuffer();
+							char c = bbuf.getChar();
+							while (c!='_') {
+								stringbuf.append(c);
+								c = bbuf.getChar();
+							}
+							String serverIdAddr = stringbuf.toString();
 							SessionTuple sessTup = new SessionTuple(sessNum, serverIdAddr);
 							SessionState sessState = map.get(sessTup);
 							if (sessState != null && sessState.version==sessionVersionNum) {
@@ -1005,11 +1033,17 @@ public class MyServlet extends HttpServlet
 							outBuf = bbuf.array();
 						} else if (opCode==SESSIONWRITE) {
 							int sessNum = bbuf.getInt();
-							bbuf.getInt(); // increment by four bytes (the same four used to make the serverId below)
-							String serverIdAddr = new String(inBuf, 8, 4);
+//							bbuf.getInt(); // increment by four bytes (the same four used to make the serverId below)
 							int sessionVersionNum = bbuf.getInt();
+							StringBuffer stringbuf = new StringBuffer();
+							char c = bbuf.getChar();
+							while (c!='_') {
+								stringbuf.append(c);
+								c = bbuf.getChar();
+							}
+							String serverIdAddr = stringbuf.toString();
 							long discardTime = bbuf.getLong();
-							String msg = new String(inBuf, 25, recvPkt.getLength()-25);
+							String msg = new String(inBuf, 23 + serverIdAddr.length()*2, recvPkt.getLength()-23-serverIdAddr.length()*2);
 							msg = msg.trim();
 
 							SessionTuple sessTup = new SessionTuple(sessNum, serverIdAddr);
@@ -1021,10 +1055,15 @@ public class MyServlet extends HttpServlet
 							outBuf = bbuf.array();
 						} else if (opCode==GETVIEW) {
 							HashSet<String> viewips = View.getIPs(view);
-							bbuf = ByteBuffer.allocate(4 + 4*viewips.size());
+							int totallength = 0;
+							for (String s : viewips) {
+								totallength += s.length() + 1;
+							}
+							bbuf = ByteBuffer.allocate(4 + totallength);
 							bbuf.putInt(cid);
 							for (String s : viewips) {
 								bbuf.put(s.getBytes());
+								bbuf.putChar('_');
 							}
 							outBuf = bbuf.array();
 						}
