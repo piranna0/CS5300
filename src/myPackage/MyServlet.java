@@ -99,20 +99,21 @@ public class MyServlet extends HttpServlet
 	public MyServlet() {
 		super();
 
-		//		try {
-		//			SvrID = inetaddrToString(InetAddress.getLocalHost());
-		//		} catch (UnknownHostException e) {
-		//			// TODO Auto-generated catch block
-		//			e.printStackTrace();
-		//		}
+				try {
+					SvrID = InetAddress.getLocalHost().getHostAddress();
+					System.out.println("ServerId " + SvrID);
+				} catch (UnknownHostException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 		LOGGER= Logger.getLogger(getClass().getName());
 		setSvrID();
 
-//		garbageCollector(); 
+		garbageCollector(); 
 		ViewDB.init();
 		rpcServer();
-//		bootstrap();
-//		gossip();
+		bootstrap();
+		gossip();
 	}
 
 	
@@ -755,7 +756,7 @@ public class MyServlet extends HttpServlet
 	{
 		InetAddress addr = null;
 		if(SvrID == null){
-			setSvrID();
+//			setSvrID();
 		}
 		try 
 		{
@@ -767,8 +768,8 @@ public class MyServlet extends HttpServlet
 			e.printStackTrace();
 		}
 		if(addr == null){
-			setSvrID();
-			return getIP();
+//			setSvrID();
+//			return getIP();
 		}
 		return addr;
 	}
@@ -988,10 +989,13 @@ public class MyServlet extends HttpServlet
 //							bbuf.getInt(); // increment by four bytes (the same four used to make the serverId below)
 							int sessionVersionNum = bbuf.getInt();
 							StringBuffer stringbuf = new StringBuffer();
-							char c = bbuf.getChar();
-							while (c!='_') {
-								stringbuf.append(c);
-								c = bbuf.getChar();
+							while (true) {
+								try {
+									char c = bbuf.getChar();
+									stringbuf.append(c);
+								} catch (BufferUnderflowException e) {
+									break;
+								}
 							}
 							String serverIdAddr = stringbuf.toString();
 							SessionTuple sessTup = new SessionTuple(sessNum, serverIdAddr);
@@ -1035,7 +1039,7 @@ public class MyServlet extends HttpServlet
 							HashSet<String> viewips = View.getIPs(view);
 							int totallength = 0;
 							for (String s : viewips) {
-								totallength += s.length() + 1;
+								totallength += s.length()*2 + 1;
 							}
 							bbuf = ByteBuffer.allocate(4 + totallength);
 							bbuf.putInt(cid);
