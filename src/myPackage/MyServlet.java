@@ -39,7 +39,7 @@ public class MyServlet extends HttpServlet
 	private static final int ViewSz = 5;
 	private static AtomicInteger sessionID = new AtomicInteger();
 	private String cookieName = "CS5300PROJ1SESSION";
-	public static int SESSION_TIMEOUT_SECS = 15;
+	public static int SESSION_TIMEOUT_SECS = 60;
 	public static int DISCARD_TIME_DELTA = 1;
 	private static AtomicInteger callId = new AtomicInteger();
 	private final byte SESSIONREAD = 0; // operation code
@@ -47,55 +47,55 @@ public class MyServlet extends HttpServlet
 	private final byte GETVIEW = 2; //operation code
 	private final int PORT = 5300;
 	private String SvrID;
-	private static int TIMEOUT = 10000;
+	private static int TIMEOUT = 1000;
 
 	private static int GOSSIP_MSECS = 12000;
 	private static int BOOTSTRAP_MSECS = 12000;
-	
+
 	private View view = new View();
-	
-//	public static void main(String[] args) {
-//		MyServlet m = new MyServlet();
-//		m.rpcServer();
-//		try {
-//			InetAddress addr = InetAddress.getByName(m.SvrID);
-//			byte[] bytes = addr.getAddress();
-//			boolean b1 = m.sessionWrite(0, m.SvrID, 0, "thing", addr);
-//			boolean b2 = m.sessionWrite(1, m.SvrID, 0, "blah", addr);
-//			for (SessionTuple s : m.map.keySet()) {
-//				System.out.println(s.serverId);
-//				SessionState state = m.map.get(s);
-//				System.out.println("sid: " + String.valueOf(s.serverId) + " num: " + s.sessionNum + " msg: " + state.message);
-//			}
-//			bytes[0] = 0;
-//			boolean b3 = m.sessionWrite(1, m.SvrID, 0, "blah", InetAddress.getByAddress(bytes));
-//			System.out.println(b1 && b2 );
-//			System.out.println(b3);
-//            InetAddress[] addrs = {addr};
-//            String s1 = m.sessionRead(0, m.SvrID, 0, addrs);
-//            String s2 = m.sessionRead(1, m.SvrID, 0, addrs);
-//            View v = m.getView(addr);
-//            System.out.println("View: " + v.toString());
-//            System.out.println(s1 + "/" + s2);
-//            Thread.sleep(17000);
-//            byte[] zeros = {0,0,0,0};
-//            InetAddress a = InetAddress.getByAddress(zeros);
-//            InetAddress[] addrss = {a, addr};
-//            s1 = m.sessionRead(0, m.SvrID, 0, addrss);
-//            System.out.println("later: " + s1);
-//
-//		} catch (UnknownHostException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (InterruptedException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//	}
+
+	//	public static void main(String[] args) {
+	//		MyServlet m = new MyServlet();
+	//		m.rpcServer();
+	//		try {
+	//			InetAddress addr = InetAddress.getByName(m.SvrID);
+	//			byte[] bytes = addr.getAddress();
+	//			boolean b1 = m.sessionWrite(0, m.SvrID, 0, "thing", addr);
+	//			boolean b2 = m.sessionWrite(1, m.SvrID, 0, "blah", addr);
+	//			for (SessionTuple s : m.map.keySet()) {
+	//				System.out.println(s.serverId);
+	//				SessionState state = m.map.get(s);
+	//				System.out.println("sid: " + String.valueOf(s.serverId) + " num: " + s.sessionNum + " msg: " + state.message);
+	//			}
+	//			bytes[0] = 0;
+	//			boolean b3 = m.sessionWrite(1, m.SvrID, 0, "blah", InetAddress.getByAddress(bytes));
+	//			System.out.println(b1 && b2 );
+	//			System.out.println(b3);
+	//            InetAddress[] addrs = {addr};
+	//            String s1 = m.sessionRead(0, m.SvrID, 0, addrs);
+	//            String s2 = m.sessionRead(1, m.SvrID, 0, addrs);
+	//            View v = m.getView(addr);
+	//            System.out.println("View: " + v.toString());
+	//            System.out.println(s1 + "/" + s2);
+	//            Thread.sleep(17000);
+	//            byte[] zeros = {0,0,0,0};
+	//            InetAddress a = InetAddress.getByAddress(zeros);
+	//            InetAddress[] addrss = {a, addr};
+	//            s1 = m.sessionRead(0, m.SvrID, 0, addrss);
+	//            System.out.println("later: " + s1);
+	//
+	//		} catch (UnknownHostException e) {
+	//			// TODO Auto-generated catch block
+	//			e.printStackTrace();
+	//		} catch (InterruptedException e) {
+	//			// TODO Auto-generated catch block
+	//			e.printStackTrace();
+	//		}
+	//	}
 
 	// Session State table, aka hash map used to store session information
 	// K: sessionID, V: SessionState
-	private ConcurrentHashMap<SessionTuple, SessionState> map = new ConcurrentHashMap<SessionTuple, SessionState>();
+	private ConcurrentHashMap<SessionTuple, SessionState> map;
 
 	// spawns the garbage collector daemon thread
 	public void garbageCollector()
@@ -135,14 +135,15 @@ public class MyServlet extends HttpServlet
 	 * @see HttpServlet#HttpServlet()
 	 */
 	public MyServlet() {
-//		super();
-//				try {
-//					SvrID = InetAddress.getLocalHost().getHostAddress();
-//					System.out.println("ServerId " + SvrID);
-//				} catch (UnknownHostException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
+		//		super();
+		//				try {
+		//					SvrID = InetAddress.getLocalHost().getHostAddress();
+		//					System.out.println("ServerId " + SvrID);
+		//				} catch (UnknownHostException e) {
+		//					// TODO Auto-generated catch block
+		//					e.printStackTrace();
+		//				}
+		map = new ConcurrentHashMap<SessionTuple, SessionState>();
 		LOGGER= Logger.getLogger(getClass().getName());
 		setSvrID();
 
@@ -153,14 +154,14 @@ public class MyServlet extends HttpServlet
 		gossip();
 	}
 
-	
+
 	public void setSvrID(){
-//		try {
-//			SvrID = InetAddress.getLocalHost().getHostAddress();
-//		} catch (UnknownHostException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
+		//		try {
+		//			SvrID = InetAddress.getLocalHost().getHostAddress();
+		//		} catch (UnknownHostException e) {
+		//			// TODO Auto-generated catch block
+		//			e.printStackTrace();
+		//		}
 		Runtime r = Runtime.getRuntime();
 		Process blah;
 		String IPAddress = "0.0.0.0";
@@ -279,6 +280,7 @@ public class MyServlet extends HttpServlet
 						// forward information to jsp page and display it
 						request.setAttribute("loc", "line 242");
 						request.getRequestDispatcher("/error.jsp").forward(request, response);
+						//						TODO: Send timeout zero cookie on failures
 						return;
 					}
 					ver = ss.version;
@@ -618,7 +620,8 @@ public class MyServlet extends HttpServlet
 					//					response.addCookie(myCookie);
 
 					// forward information to jsp page and display it
-					request.setAttribute("loc", "line 583 " + SvrID + " " + strLocs[0] + " " + strLocs[1]);
+					request.setAttribute("loc", "line 583 " + SvrID + " " + strLocs[0] + " " + inetLocs[0] + " " 
+							+ strLocs[1] + " " + inetLocs[1]);
 					request.getRequestDispatcher("/error.jsp").forward(request, response);
 					return;
 				}
@@ -747,7 +750,7 @@ public class MyServlet extends HttpServlet
 		if (c != null)
 		{
 			String val="";
-				val = c.getValue();
+			val = c.getValue();
 			String[] tokens = val.split("_");
 
 			return Integer.valueOf(tokens[2]);
@@ -793,7 +796,7 @@ public class MyServlet extends HttpServlet
 	{
 		InetAddress addr = null;
 		if(SvrID == null){
-//			setSvrID();
+			//			setSvrID();
 		}
 		try 
 		{
@@ -805,8 +808,8 @@ public class MyServlet extends HttpServlet
 			e.printStackTrace();
 		}
 		if(addr == null){
-//			setSvrID();
-//			return getIP();
+			//			setSvrID();
+			//			return getIP();
 		}
 		return addr;
 	}
@@ -819,7 +822,7 @@ public class MyServlet extends HttpServlet
 			InetAddress[] address) {
 		try {
 			DatagramSocket rpcSocket = new DatagramSocket();
-			rpcSocket.setSoTimeout(TIMEOUT);
+			rpcSocket.setSoTimeout(TIMEOUT * 2); //TODO: 2 is the number of possible RPC calls made
 			int newCallId = callId.getAndAdd(1);
 
 			ByteBuffer bbuf = ByteBuffer.allocate(3*4 + 1 + 2*serverId.length()); //3 ints + 1 byte + 1 string
@@ -961,31 +964,31 @@ public class MyServlet extends HttpServlet
 				}
 			}
 
-//			while (true) {
-//				StringBuffer stringbuf = new StringBuffer();
-//				try {
-//					char c = bbuf.getChar();
-//					boolean zero = true;
-//					while (c!='_') {
-//						zero = zero && (c==0);
-//						stringbuf.append(c);
-//						bbuf.getChar();
-//					}
-//					if (zero) { // we are reading all zeros
-//						break;
-//					}
-//					View.insert(recvView, stringbuf.toString());
-//				} catch (BufferUnderflowException e) {
-//					break; // no more bytes left
-//				}
-//			}
-				
-//			for (int i = 4; i<recvPkt.getLength()-4; i+=4) {
-//				if (inBuf[i]==0 && inBuf[i+1]==0 && inBuf[i+2]==0 && inBuf[i+3]==0) {
-//					break;
-//				}
-//				View.insert(recvView, new String(inBuf, i, 4));
-//			}
+			//			while (true) {
+			//				StringBuffer stringbuf = new StringBuffer();
+			//				try {
+			//					char c = bbuf.getChar();
+			//					boolean zero = true;
+			//					while (c!='_') {
+			//						zero = zero && (c==0);
+			//						stringbuf.append(c);
+			//						bbuf.getChar();
+			//					}
+			//					if (zero) { // we are reading all zeros
+			//						break;
+			//					}
+			//					View.insert(recvView, stringbuf.toString());
+			//				} catch (BufferUnderflowException e) {
+			//					break; // no more bytes left
+			//				}
+			//			}
+
+			//			for (int i = 4; i<recvPkt.getLength()-4; i+=4) {
+			//				if (inBuf[i]==0 && inBuf[i+1]==0 && inBuf[i+2]==0 && inBuf[i+3]==0) {
+			//					break;
+			//				}
+			//				View.insert(recvView, new String(inBuf, i, 4));
+			//			}
 			rpcSocket.close();
 			return recvView;
 		} catch (SocketException e) {
@@ -1031,30 +1034,30 @@ public class MyServlet extends HttpServlet
 						if (opCode == SESSIONREAD) {
 							int sessNum = bbuf.getInt();
 							int sessionVersionNum = bbuf.getInt();
-//							StringBuffer stringbuf = new StringBuffer();
-//							boolean valid = true;
-//							try {
-//								char c = bbuf.getChar();
-//								while (c!=0 && valid) {
-//									stringbuf.append(c);
-//									c = bbuf.getChar();
-//									System.out.println(c);
-//								}
-//							} catch (BufferUnderflowException e) {
-//								// nothing more to read
-//								valid = false;
-//							}
-//							String serverIdAddr = stringbuf.toString();
+							//							StringBuffer stringbuf = new StringBuffer();
+							//							boolean valid = true;
+							//							try {
+							//								char c = bbuf.getChar();
+							//								while (c!=0 && valid) {
+							//									stringbuf.append(c);
+							//									c = bbuf.getChar();
+							//									System.out.println(c);
+							//								}
+							//							} catch (BufferUnderflowException e) {
+							//								// nothing more to read
+							//								valid = false;
+							//							}
+							//							String serverIdAddr = stringbuf.toString();
 							String serverIdAddr = new String(inBuf, 13, recvPkt.getLength()-13);
 							serverIdAddr = serverIdAddr.trim();
 							SessionTuple sessTup = new SessionTuple(sessNum, serverIdAddr);
 							SessionState sessState = map.get(sessTup);
-//							for (SessionTuple s : map.keySet()) {
-//								SessionState state = map.get(s);
-//								System.out.println("num: " + state.sessionID.sessionNum + " sid: " + state.sessionID.serverId + " msg: " + state.message);
-//							}
-//							System.out.println("sessTup num: " + sessTup.sessionNum + " svrid: " + sessTup.serverId);
-//							System.out.println(sessionVersionNum);
+							//							for (SessionTuple s : map.keySet()) {
+							//								SessionState state = map.get(s);
+							//								System.out.println("num: " + state.sessionID.sessionNum + " sid: " + state.sessionID.serverId + " msg: " + state.message);
+							//							}
+							//							System.out.println("sessTup num: " + sessTup.sessionNum + " svrid: " + sessTup.serverId);
+							//							System.out.println(sessionVersionNum);
 							if (sessState != null && sessState.version==sessionVersionNum) {
 								bbuf = ByteBuffer.allocate(4 + 1 + sessState.message.length()*2);
 								bbuf.putInt(cid);
@@ -1070,34 +1073,34 @@ public class MyServlet extends HttpServlet
 							outBuf = bbuf.array();
 						} else if (opCode==SESSIONWRITE) {
 							int sessNum = bbuf.getInt();
-//							bbuf.getInt(); // increment by four bytes (the same four used to make the serverId below)
+							//							bbuf.getInt(); // increment by four bytes (the same four used to make the serverId below)
 							int sessionVersionNum = bbuf.getInt();
 							long discardTime = bbuf.getLong();
-//							StringBuffer stringbuf = new StringBuffer();
-//							char c = bbuf.getChar();
-//							while (c!='_') {
-//								stringbuf.append(c);
-//								c = bbuf.getChar();
-//							}
-//							String serverIdAddr = stringbuf.toString();
-//							StringBuffer msgbuf = new StringBuffer();
-//							boolean valid = true;
-//							try {
-//								c = bbuf.getChar();
-//								while (c!=0 && valid) {
-//									msgbuf.append(c);
-//									c = bbuf.getChar();
-//								}
-//							} catch (BufferUnderflowException e) {
-//								valid = false;
-//							}
+							//							StringBuffer stringbuf = new StringBuffer();
+							//							char c = bbuf.getChar();
+							//							while (c!='_') {
+							//								stringbuf.append(c);
+							//								c = bbuf.getChar();
+							//							}
+							//							String serverIdAddr = stringbuf.toString();
+							//							StringBuffer msgbuf = new StringBuffer();
+							//							boolean valid = true;
+							//							try {
+							//								c = bbuf.getChar();
+							//								while (c!=0 && valid) {
+							//									msgbuf.append(c);
+							//									c = bbuf.getChar();
+							//								}
+							//							} catch (BufferUnderflowException e) {
+							//								valid = false;
+							//							}
 							String all = new String(inBuf, 21 , recvPkt.getLength()-21);
 							all = all.trim();
 							String[] sid_and_msg = all.split("_", 2);
 							String serverIdAddr = sid_and_msg[0];
 							String msg = sid_and_msg[1];
-//							String msg = msgbuf.toString();
-//							msg = msg.trim();
+							//							String msg = msgbuf.toString();
+							//							msg = msg.trim();
 
 							SessionTuple sessTup = new SessionTuple(sessNum, serverIdAddr);
 							SessionState sessState = new SessionState(sessTup, sessionVersionNum, msg, discardTime);
@@ -1116,7 +1119,7 @@ public class MyServlet extends HttpServlet
 							bbuf.putInt(cid);
 							for (String s : viewips) {
 								bbuf.put(s.getBytes());
-								bbuf.putChar('_');
+								bbuf.put("_".getBytes());
 							}
 							outBuf = bbuf.array();
 						}
@@ -1237,21 +1240,21 @@ public class MyServlet extends HttpServlet
 		daemonThread.start();
 	}
 
-//	private String convertToReadableIP(String addr) {
-//		if (addr == null)
-//		{
-//			return "null";
-//		}
-//		byte[] bytes = addr.getBytes();
-//		InetAddress a = null;
-//		try {
-//			a = InetAddress.getByAddress(bytes);
-//			return a.getHostAddress();
-//		} catch (UnknownHostException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		return null;
-//	}
+	//	private String convertToReadableIP(String addr) {
+	//		if (addr == null)
+	//		{
+	//			return "null";
+	//		}
+	//		byte[] bytes = addr.getBytes();
+	//		InetAddress a = null;
+	//		try {
+	//			a = InetAddress.getByAddress(bytes);
+	//			return a.getHostAddress();
+	//		} catch (UnknownHostException e) {
+	//			// TODO Auto-generated catch block
+	//			e.printStackTrace();
+	//		}
+	//		return null;
+	//	}
 
 }
