@@ -956,7 +956,9 @@ public class MyServlet extends HttpServlet
 			String allview = new String(inBuf, 4, recvPkt.getLength()-4);
 			allview.trim();
 			for (String s : allview.split("_")) {
-				View.insert(recvView, s);
+				if (!s.trim().equals("")) {
+					View.insert(recvView, s);
+				}
 			}
 
 //			while (true) {
