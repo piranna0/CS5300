@@ -841,7 +841,7 @@ public class MyServlet extends HttpServlet
 			} while(recvCallId != cid);
 			byte success = bbuf.get();
 			if (success==1) {
-				return new String(inBuf, 5, recvPkt.getLength()-5);
+				return new String(inBuf, 5, recvPkt.getLength()-5).trim();
 			} else {
 				return null;
 			}
@@ -932,6 +932,9 @@ public class MyServlet extends HttpServlet
 			} while(recvCallId != newCallId);
 			View recvView = new View();
 			for (int i = 4; i<recvPkt.getLength()-4; i+=4) {
+				if (inBuf[i]==0 && inBuf[i+1]==0 && inBuf[i+2]==0 && inBuf[i+3]==0) {
+					break;
+				}
 				View.insert(recvView, new String(inBuf, i, 4));
 			}
 			rpcSocket.close();
@@ -1003,6 +1006,7 @@ public class MyServlet extends HttpServlet
 							int sessionVersionNum = bbuf.getInt();
 							long discardTime = bbuf.getLong();
 							String msg = new String(inBuf, 25, recvPkt.getLength()-25);
+							msg = msg.trim();
 
 							SessionTuple sessTup = new SessionTuple(sessNum, serverIdAddr);
 							SessionState sessState = new SessionState(sessTup, sessionVersionNum, msg, discardTime);
