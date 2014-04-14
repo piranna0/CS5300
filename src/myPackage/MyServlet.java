@@ -108,11 +108,11 @@ public class MyServlet extends HttpServlet
 		LOGGER= Logger.getLogger(getClass().getName());
 		setSvrID();
 
-//		garbageCollector(); 
+		garbageCollector(); 
 		ViewDB.init();
 		rpcServer();
-//		bootstrap();
-//		gossip();
+		bootstrap();
+		gossip();
 	}
 
 	
