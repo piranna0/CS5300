@@ -239,6 +239,7 @@ public class MyServlet extends HttpServlet
 					if (ss == null)
 					{
 						// forward information to jsp page and display it
+						request.setAttribute("loc", "line 242");
 						request.getRequestDispatcher("/error.jsp").forward(request, response);
 						return;
 					}
@@ -327,6 +328,7 @@ public class MyServlet extends HttpServlet
 					//					response.addCookie(myDeadCookie);
 
 					// forward information to jsp page and display it
+					request.setAttribute("loc", "line 331");
 					request.getRequestDispatcher("/error.jsp").forward(request, response);
 				}
 				else
@@ -473,6 +475,7 @@ public class MyServlet extends HttpServlet
 					if (ss == null)
 					{
 						// forward information to jsp page and display it
+						request.setAttribute("loc", "line 478");
 						request.getRequestDispatcher("/error.jsp").forward(request, response);
 						return;
 					}
@@ -577,6 +580,7 @@ public class MyServlet extends HttpServlet
 					//					response.addCookie(myCookie);
 
 					// forward information to jsp page and display it
+					request.setAttribute("loc", "line 583");
 					request.getRequestDispatcher("/error.jsp").forward(request, response);
 					return;
 				}
