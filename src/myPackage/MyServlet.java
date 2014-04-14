@@ -135,7 +135,7 @@ public class MyServlet extends HttpServlet
 	 * @see HttpServlet#HttpServlet()
 	 */
 	public MyServlet() {
-		//		super();
+				super();
 		//				try {
 		//					SvrID = InetAddress.getLocalHost().getHostAddress();
 		//					System.out.println("ServerId " + SvrID);
@@ -156,12 +156,12 @@ public class MyServlet extends HttpServlet
 
 
 	public void setSvrID(){
-		//		try {
-		//			SvrID = InetAddress.getLocalHost().getHostAddress();
-		//		} catch (UnknownHostException e) {
-		//			// TODO Auto-generated catch block
-		//			e.printStackTrace();
-		//		}
+		try {
+			SvrID = InetAddress.getLocalHost().getHostAddress();
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 //		Runtime r = Runtime.getRuntime();
 //		Process blah;
 //		String IPAddress = "0.0.0.0";
@@ -171,23 +171,23 @@ public class MyServlet extends HttpServlet
 //			// TODO Auto-generated catch block
 //			e.printStackTrace();
 //		}
-		Runtime r = Runtime.getRuntime();
-		Process blah;
-		String IPAddress = "0.0.0.0";
-		try {
-			blah = r.exec("/opt/aws/bin/ec2-metadata --public-ipv4");
-
-			BufferedReader in = new BufferedReader(new InputStreamReader(blah.getInputStream()));
-			String line = null;
-			while((line = in.readLine()) != null){
-				IPAddress = line;
-			}
-			SvrID = IPAddress.split(" ")[1];
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			setSvrID();
-		}
+//		Runtime r = Runtime.getRuntime();
+//		Process blah;
+//		String IPAddress = "0.0.0.0";
+//		try {
+//			blah = r.exec("/opt/aws/bin/ec2-metadata --public-ipv4");
+//
+//			BufferedReader in = new BufferedReader(new InputStreamReader(blah.getInputStream()));
+//			String line = null;
+//			while((line = in.readLine()) != null){
+//				IPAddress = line;
+//			}
+//			SvrID = IPAddress.split(" ")[1];
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//			setSvrID();
+//		}
 	}
 	/**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
@@ -226,6 +226,8 @@ public class MyServlet extends HttpServlet
 			while (reply == false)
 			{
 				String backup_ip = View.choose(myCopy);
+				View.remove(myCopy, backup_ip);
+				System.out.println("BACKUP IP: " + backup_ip); 
 				if (backup_ip.equals("0.0.0.0")) 
 				{
 					// nothing's in view
@@ -241,6 +243,10 @@ public class MyServlet extends HttpServlet
 						loc[1] = backup_ip;
 						break;
 					}
+					else{
+						RPCtimeout(InetAddress.getByName(backup_ip));
+						System.out.println("View: " + view);
+					}
 				}
 			}
 			value = concatValue(sess, ver, loc);
@@ -248,6 +254,7 @@ public class MyServlet extends HttpServlet
 			// store new info to map
 			SessionTuple sessTup = new SessionTuple(sid, loc[0]);
 			SessionState state = new SessionState(sessTup, ver, message, timeout);
+//			sessionWrite(sid, loc[0], ver, message, InetAddress.getByName(SvrID));
 			map.put(sessTup, state);
 
 			// construct cookie
@@ -306,6 +313,7 @@ public class MyServlet extends HttpServlet
 					while (reply == false)
 					{
 						String backup_ip = View.choose(myCopy);
+						View.remove(myCopy, backup_ip);
 						if (backup_ip.equals("0.0.0.0"))
 						{
 							// nothing's in view
@@ -319,6 +327,9 @@ public class MyServlet extends HttpServlet
 							{
 								loc[1] = backup_ip;
 								break;
+							}
+							else{
+								RPCtimeout(InetAddress.getByName(backup_ip));
 							}
 						}
 					}
@@ -398,6 +409,7 @@ public class MyServlet extends HttpServlet
 					while (rep == false)
 					{
 						String backup_ip = View.choose(myCopy);
+						View.remove(myCopy, backup_ip);
 						if (backup_ip.equals("0.0.0.0")) 
 						{
 							// nothing's in view
@@ -412,6 +424,9 @@ public class MyServlet extends HttpServlet
 								loc[1] = backup_ip;
 								break;
 							}
+							else{
+								RPCtimeout(InetAddress.getByName(backup_ip));
+							}
 						}
 					}
 					value = concatValue(sess, ver, loc);
@@ -419,8 +434,9 @@ public class MyServlet extends HttpServlet
 					// store updated info to map (choose primary server)
 					SessionTuple sessTup = new SessionTuple(Integer.valueOf(sess[0]), loc[0]);
 					SessionState state = new SessionState(sessTup, ver, message, timeout);
+//					sessionWrite(Integer.valueOf(sess[0]), loc[0], ver, message, InetAddress.getByName(SvrID));
 					map.put(sessTup, state);
-
+					
 					// kill current cookie
 					myCookie.setMaxAge(0);
 					myCookie.setValue(null);
@@ -553,6 +569,7 @@ public class MyServlet extends HttpServlet
 					while (reply == false)
 					{
 						String backup_ip = View.choose(myCopy);
+						View.remove(myCopy, backup_ip);
 						if (backup_ip.equals("0.0.0.0")) 
 						{
 							// nothing's in view
@@ -566,6 +583,9 @@ public class MyServlet extends HttpServlet
 							{
 								loc[1] = backup_ip;
 								break;
+							}
+							else{
+								RPCtimeout(InetAddress.getByName(backup_ip));
 							}
 						}
 					}
@@ -618,6 +638,7 @@ public class MyServlet extends HttpServlet
 			{
 				// RPC call
 				reply = sessionRead(sessNum, servNum, verNum, inetLocs);
+				System.out.println(reply);
 				if (reply == null)
 				{
 					//					// send a dead cookie
@@ -661,6 +682,7 @@ public class MyServlet extends HttpServlet
 			while (rep == false)
 			{
 				String backup_ip = View.choose(myCopy);
+				View.remove(myCopy, backup_ip);
 				if (backup_ip.equals("0.0.0.0")) 
 				{
 					// nothing's in view
@@ -675,6 +697,9 @@ public class MyServlet extends HttpServlet
 						loc[1] = backup_ip;
 						break;
 					}
+					else{
+						RPCtimeout(InetAddress.getByName(backup_ip));
+					}
 				}
 			}
 			value = concatValue(sess, ver, loc);
@@ -682,8 +707,9 @@ public class MyServlet extends HttpServlet
 			// store updated info to map (choose primary server)
 			SessionTuple sessTup = new SessionTuple(Integer.valueOf(sess[0]), loc[0]);
 			SessionState state = new SessionState(sessTup, ver, message, timeout);
+//			sessionWrite(Integer.valueOf(sess[0]), loc[0], ver, message, InetAddress.getByName(SvrID));
 			map.put(sessTup, state);
-
+			
 			// kill current cookie
 			myCookie.setMaxAge(0);
 			myCookie.setValue(null);
@@ -1041,6 +1067,7 @@ public class MyServlet extends HttpServlet
 
 						byte[] outBuf = null;
 						if (opCode == SESSIONREAD) {
+							System.out.println("ENTER READ");
 							int sessNum = bbuf.getInt();
 							int sessionVersionNum = bbuf.getInt();
 							//							StringBuffer stringbuf = new StringBuffer();
@@ -1081,6 +1108,7 @@ public class MyServlet extends HttpServlet
 							}
 							outBuf = bbuf.array();
 						} else if (opCode==SESSIONWRITE) {
+							System.out.println("ENTER Write");
 							int sessNum = bbuf.getInt();
 							//							bbuf.getInt(); // increment by four bytes (the same four used to make the serverId below)
 							int sessionVersionNum = bbuf.getInt();
@@ -1118,7 +1146,9 @@ public class MyServlet extends HttpServlet
 							bbuf = ByteBuffer.allocate(4);
 							bbuf.putInt(cid);
 							outBuf = bbuf.array();
+							System.out.println("EXIT WRITE");
 						} else if (opCode==GETVIEW) {
+							System.out.println("ENTER GET");
 							HashSet<String> viewips = View.getIPs(view);
 							int totallength = 0;
 							for (String s : viewips) {
@@ -1131,6 +1161,7 @@ public class MyServlet extends HttpServlet
 								bbuf.put("_".getBytes());
 							}
 							outBuf = bbuf.array();
+							System.out.println("EXIT GET");
 						}
 						DatagramPacket sendPkt = new DatagramPacket(outBuf, outBuf.length, returnAddr, returnPort);
 						try {
