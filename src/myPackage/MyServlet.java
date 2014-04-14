@@ -162,6 +162,15 @@ public class MyServlet extends HttpServlet
 		//			// TODO Auto-generated catch block
 		//			e.printStackTrace();
 		//		}
+//		Runtime r = Runtime.getRuntime();
+//		Process blah;
+//		String IPAddress = "0.0.0.0";
+//		try {
+//			SvrID = InetAddress.getLocalHost().getHostAddress();
+//		} catch (UnknownHostException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		Runtime r = Runtime.getRuntime();
 		Process blah;
 		String IPAddress = "0.0.0.0";
@@ -198,7 +207,7 @@ public class MyServlet extends HttpServlet
 		InetAddress local_ip = getIP();
 
 		// check if this is client's first request. if so, construct new cookie and new SessionState
-		if (myCookie == null)
+		if (myCookie == null || map.size() == 0)		// TODO i added this
 		{
 			int sid = sessionID.getAndAdd(1);
 			sess[0] = String.valueOf(sid);
@@ -1183,7 +1192,7 @@ public class MyServlet extends HttpServlet
 							//		TODO: Need RPC call for GetView written
 							try {
 								System.out.println("GOSSIP: " + InetAddress.getByName(ip));
-								temp = getView(InetAddress.getByName(ip));
+								temp = getView(InetAddress.getByName(ip));				// TODO: this always returns null (socket timeout)
 							} catch (UnknownHostException e) {
 								// TODO Auto-generated catch block
 								e.printStackTrace();
