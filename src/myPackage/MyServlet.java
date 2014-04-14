@@ -76,7 +76,7 @@ public class MyServlet extends HttpServlet
 						if (state.timeout < (int)(System.currentTimeMillis()/1000))
 						{
 							SessionState s = map.remove(tup);
-							System.out.println("gc:removed <" + convertToReadableIP(tup.serverId) + "/" + tup.sessionNum + ", " + convertToReadableIP(s.sessionID.serverId) + ">");
+							System.out.println("gc:removed <" + tup.serverId + "/" + tup.sessionNum + ", " + s.sessionID.serverId + ">");
 						}
 					}
 					try {
@@ -107,11 +107,11 @@ public class MyServlet extends HttpServlet
 		LOGGER= Logger.getLogger(getClass().getName());
 		setSvrID();
 
-		garbageCollector(); 
+//		garbageCollector(); 
 		ViewDB.init();
 		rpcServer();
-		bootstrap();
-		gossip();
+//		bootstrap();
+//		gossip();
 	}
 
 	
@@ -127,16 +127,8 @@ public class MyServlet extends HttpServlet
 			while((line = in.readLine()) != null){
 				IPAddress = line;
 			}
-			IPAddress = IPAddress.split(" ")[1];
+			SvrID = IPAddress.split(" ")[1];
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			setSvrID();
-		}
-		
-		try {
-			SvrID = inetaddrToString(InetAddress.getByName(IPAddress));
-		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			setSvrID();
@@ -166,7 +158,7 @@ public class MyServlet extends HttpServlet
 			sess[0] = String.valueOf(sid);
 			sess[1] = inetaddrToString(local_ip);
 			ver = 1;
-			message = convertToReadableIP(SvrID);
+			message = SvrID;
 			long curTime = System.currentTimeMillis() / 1000;
 			timeout = curTime + SESSION_TIMEOUT_SECS;
 
@@ -179,16 +171,16 @@ public class MyServlet extends HttpServlet
 			while (reply == false)
 			{
 				String backup_ip = View.choose(myCopy);
-				if (backup_ip.equals(inetaddrToString(InetAddress.getByName("0.0.0.0")))) 
+				if (backup_ip.equals("0.0.0.0")) 
 				{
 					// nothing's in view
-					loc[1] = inetaddrToString(InetAddress.getByName("0.0.0.0"));
+					loc[1] = "0.0.0.0";
 					break;
 				}
 				else
 				{
 					System.out.println(backup_ip);
-					reply = sessionWrite(sid, sess[1].getBytes(), ver, message, InetAddress.getByAddress(backup_ip.getBytes()));
+					reply = sessionWrite(sid, sess[1], ver, message, InetAddress.getByName(backup_ip));
 					if (reply == true)
 					{
 						loc[1] = backup_ip;
@@ -204,7 +196,8 @@ public class MyServlet extends HttpServlet
 			map.put(sessTup, state);
 
 			// construct cookie
-			c = new Cookie(cookieName, URLEncoder.encode(value,"UTF-8"));
+			//TODO: Correct constructor?
+			c = new Cookie(cookieName, concatPrint(sess, ver, loc));
 			c.setMaxAge(SESSION_TIMEOUT_SECS);	// set timeout!!!
 			c.setComment(message);
 
@@ -214,7 +207,7 @@ public class MyServlet extends HttpServlet
 			// forward information to jsp page
 			request.setAttribute("myVal", concatPrint(sess, ver, loc));
 			request.setAttribute("myMessage", c.getComment());
-			request.setAttribute("myLocation", "New session created and stored in " + ViewDB.convertToReadableIP(SvrID));
+			request.setAttribute("myLocation", "New session created and stored in " + SvrID);
 			request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
 			request.setAttribute("myDis", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS + DISCARD_TIME_DELTA);
 			request.setAttribute("myView", view.toString());
@@ -230,7 +223,7 @@ public class MyServlet extends HttpServlet
 			for (String s : locs)
 			{
 				// if the SessionState is stored in local server, simply reconstruct cookie and update it
-				if (!flag && (SvrID).equals(s))
+				if (!flag && (SvrID.equals(s)))
 				{
 					int sid = getID(myCookie);
 					sess[0] = String.valueOf(sid);
@@ -257,15 +250,15 @@ public class MyServlet extends HttpServlet
 					while (reply == false)
 					{
 						String backup_ip = View.choose(myCopy);
-						if (backup_ip.equals(inetaddrToString(InetAddress.getByName("0.0.0.0"))))
+						if (backup_ip.equals("0.0.0.0"))
 						{
 							// nothing's in view
-							loc[1] = inetaddrToString(InetAddress.getByName("0.0.0.0"));
+							loc[1] = "0.0.0.0";
 							break;
 						}
 						else 
 						{
-							reply = sessionWrite(sid, sess[1].getBytes(), ver, message, InetAddress.getByAddress(backup_ip.getBytes()));
+							reply = sessionWrite(sid, sess[1], ver, message, InetAddress.getByName(backup_ip));
 							if (reply == true)
 							{
 								loc[1] = backup_ip;
@@ -284,7 +277,7 @@ public class MyServlet extends HttpServlet
 					myCookie.setMaxAge(0);
 					myCookie.setValue(null);
 					// reconstruct cookie
-					c = new Cookie(cookieName, URLEncoder.encode(value,"UTF-8"));
+					c = new Cookie(cookieName, concatPrint(sess, ver, loc));
 					c.setMaxAge(SESSION_TIMEOUT_SECS);		// set timeout!!!
 					c.setComment(message);
 
@@ -294,7 +287,7 @@ public class MyServlet extends HttpServlet
 					// forward information to jsp page
 					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
-					request.setAttribute("myLocation", "Existing session found locally in " + ViewDB.convertToReadableIP(SvrID));
+					request.setAttribute("myLocation", "Existing session found locally in " + SvrID);
 					request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
 					request.setAttribute("myDis", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS + DISCARD_TIME_DELTA);
 					request.setAttribute("myView", view.toString());
@@ -308,12 +301,12 @@ public class MyServlet extends HttpServlet
 			{
 				// extract relevant values for sessionRead
 				int sessNum = getID(myCookie);
-				byte[] servNum = getIP(myCookie).getBytes();
+				String servNum = getIP(myCookie);
 				int verNum = getVer(myCookie);
 				String[] strLocs = getLoc(myCookie);
 				InetAddress[] inetLocs = new InetAddress[2];
-				inetLocs[0] = InetAddress.getByAddress(strLocs[0].getBytes());
-				inetLocs[1] = InetAddress.getByAddress(strLocs[1].getBytes());
+				inetLocs[0] = InetAddress.getByName(strLocs[0]);
+				inetLocs[1] = InetAddress.getByName(strLocs[1]);
 
 				// RPC call
 				String reply = sessionRead(sessNum, servNum, verNum, inetLocs);
@@ -349,15 +342,15 @@ public class MyServlet extends HttpServlet
 					while (rep == false)
 					{
 						String backup_ip = View.choose(myCopy);
-						if (backup_ip.equals(inetaddrToString(InetAddress.getByName("0.0.0.0")))) 
+						if (backup_ip.equals("0.0.0.0")) 
 						{
 							// nothing's in view
-							loc[1] = inetaddrToString(InetAddress.getByName("0.0.0.0"));
+							loc[1] = "0.0.0.0";
 							break;
 						}
 						else 
 						{
-							rep = sessionWrite(sessNum, servNum, ver, message, InetAddress.getByAddress(backup_ip.getBytes()));
+							rep = sessionWrite(sessNum, servNum, ver, message, InetAddress.getByName(backup_ip));
 							if (rep == true)
 							{
 								loc[1] = backup_ip;
@@ -376,7 +369,7 @@ public class MyServlet extends HttpServlet
 					myCookie.setMaxAge(0);
 					myCookie.setValue(null);
 					// reconstruct cookie
-					c = new Cookie(cookieName, URLEncoder.encode(value, "UTF-8"));
+					c = new Cookie(cookieName, concatPrint(sess, ver, loc));
 					c.setMaxAge(SESSION_TIMEOUT_SECS);		// set timeout!!!
 					c.setComment(message);
 
@@ -386,7 +379,7 @@ public class MyServlet extends HttpServlet
 					// forward information to jsp page
 					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
-					request.setAttribute("myLocation", "Existing session found remotely in " + ViewDB.convertToReadableIP(SvrID));
+					request.setAttribute("myLocation", "Existing session found remotely in " + SvrID);
 					// TODO: have sessionRead return the serverIP who replied 
 					request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
 					request.setAttribute("myDis", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS + DISCARD_TIME_DELTA);
@@ -504,15 +497,15 @@ public class MyServlet extends HttpServlet
 					while (reply == false)
 					{
 						String backup_ip = View.choose(myCopy);
-						if (backup_ip.equals(inetaddrToString(InetAddress.getByName("0.0.0.0")))) 
+						if (backup_ip.equals("0.0.0.0")) 
 						{
 							// nothing's in view
-							loc[1] = inetaddrToString(InetAddress.getByName("0.0.0.0"));
+							loc[1] = "0.0.0.0";
 							break;
 						}
 						else
 						{
-							reply = sessionWrite(sid, sess[1].getBytes(), ver, message, InetAddress.getByAddress(backup_ip.getBytes()));
+							reply = sessionWrite(sid, sess[1], ver, message, InetAddress.getByName(backup_ip));
 							if (reply == true)
 							{
 								loc[1] = backup_ip;
@@ -532,7 +525,7 @@ public class MyServlet extends HttpServlet
 					myCookie.setMaxAge(0);
 					myCookie.setValue(null);
 					// reconstruct cookie
-					c = new Cookie(cookieName, URLEncoder.encode(value,"UTF-8"));
+					c = new Cookie(cookieName,  concatPrint(sess, ver, loc));
 					c.setMaxAge(SESSION_TIMEOUT_SECS);		// set timeout!!!
 					c.setComment(msg);
 
@@ -542,7 +535,7 @@ public class MyServlet extends HttpServlet
 					// forward information to jsp page
 					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
-					request.setAttribute("myLocation", "Existing session found locally in " + ViewDB.convertToReadableIP(SvrID));
+					request.setAttribute("myLocation", "Existing session found locally in " + SvrID);
 					request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
 					request.setAttribute("myDis", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS + DISCARD_TIME_DELTA);
 					request.setAttribute("myView", view.toString());
@@ -557,12 +550,12 @@ public class MyServlet extends HttpServlet
 		{
 			// extract relevant values for sessionRead
 			int sessNum = getID(myCookie);
-			byte[] servNum = getIP(myCookie).getBytes();
+			String servNum = getIP(myCookie);
 			int verNum = getVer(myCookie);
 			String[] strLocs = getLoc(myCookie);
 			InetAddress[] inetLocs = new InetAddress[2];
-			inetLocs[0] = InetAddress.getByAddress(strLocs[0].getBytes());
-			inetLocs[1] = InetAddress.getByAddress(strLocs[1].getBytes());
+			inetLocs[0] = InetAddress.getByName(strLocs[0]);
+			inetLocs[1] = InetAddress.getByName(strLocs[1]);
 
 			String reply = "";
 			if (action.equals("refresh"))
@@ -580,7 +573,7 @@ public class MyServlet extends HttpServlet
 					//					response.addCookie(myCookie);
 
 					// forward information to jsp page and display it
-					request.setAttribute("loc", "line 583");
+					request.setAttribute("loc", "line 583 " + SvrID + " " + strLocs[0] + " " + strLocs[1]);
 					request.getRequestDispatcher("/error.jsp").forward(request, response);
 					return;
 				}
@@ -598,7 +591,7 @@ public class MyServlet extends HttpServlet
 			else if (action.equals("refresh"))
 			{
 				// retrieve message from cookie
-				message = reply;
+				message = reply + "readOccurred";
 			}
 			long curTime = System.currentTimeMillis() / 1000;
 			timeout = curTime + SESSION_TIMEOUT_SECS;
@@ -611,15 +604,15 @@ public class MyServlet extends HttpServlet
 			while (rep == false)
 			{
 				String backup_ip = View.choose(myCopy);
-				if (backup_ip.equals(inetaddrToString(InetAddress.getByName("0.0.0.0")))) 
+				if (backup_ip.equals("0.0.0.0")) 
 				{
 					// nothing's in view
-					loc[1] = inetaddrToString(InetAddress.getByName("0.0.0.0"));
+					loc[1] = "0.0.0.0";
 					break;
 				}
 				else 
 				{
-					rep = sessionWrite(sessNum, servNum, ver, message, InetAddress.getByAddress(backup_ip.getBytes()));
+					rep = sessionWrite(sessNum, servNum, ver, message, InetAddress.getByName(backup_ip));
 					if (rep == true)
 					{
 						loc[1] = backup_ip;
@@ -638,7 +631,7 @@ public class MyServlet extends HttpServlet
 			myCookie.setMaxAge(0);
 			myCookie.setValue(null);
 			// reconstruct cookie
-			c = new Cookie(cookieName, URLEncoder.encode(value,"UTF-8"));
+			c = new Cookie(cookieName, concatPrint(sess, ver, loc));
 			c.setMaxAge(SESSION_TIMEOUT_SECS);		// set timeout!!!
 			c.setComment(message);
 
@@ -648,7 +641,7 @@ public class MyServlet extends HttpServlet
 			// forward information to jsp page
 			request.setAttribute("myVal", concatPrint(sess, ver, loc));
 			request.setAttribute("myMessage", c.getComment());
-			request.setAttribute("myLocation", "Existing session found locally in " + ViewDB.convertToReadableIP(SvrID));
+			request.setAttribute("myLocation", "Existing session found locally in " + SvrID);
 			// TODO: have sessionRead return the serverIP who replied 
 			request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
 			request.setAttribute("myDis", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS + DISCARD_TIME_DELTA);
@@ -681,12 +674,7 @@ public class MyServlet extends HttpServlet
 		if (c != null)
 		{
 			String val = "";
-			try {
-				val = URLDecoder.decode(c.getValue(),"UTF-8");
-			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			val = c.getValue();
 			String[] tokens = val.split("_");
 
 			return Integer.valueOf(tokens[0]);
@@ -700,12 +688,7 @@ public class MyServlet extends HttpServlet
 		if (c != null)
 		{
 			String val = "";
-			try {
-				val = URLDecoder.decode(c.getValue(),"UTF-8");
-			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			val = c.getValue();
 			String[] tokens = val.split("_");
 
 			return tokens[1];
@@ -719,12 +702,7 @@ public class MyServlet extends HttpServlet
 		if (c != null)
 		{
 			String val="";
-			try {
-				val = URLDecoder.decode(c.getValue(),"UTF-8");
-			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+				val = c.getValue();
 			String[] tokens = val.split("_");
 
 			return Integer.valueOf(tokens[2]);
@@ -739,12 +717,7 @@ public class MyServlet extends HttpServlet
 		if (c != null)
 		{
 			String val = "";
-			try {
-				val = URLDecoder.decode(c.getValue(), "UTF-8");
-			} catch (UnsupportedEncodingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			val = c.getValue();
 			String[] tokens = val.split("_");
 
 			ret[0] = tokens[3];
@@ -764,9 +737,9 @@ public class MyServlet extends HttpServlet
 	}
 
 	private String concatPrint(String[] sess, int ver, String[] loc) {
-		return sess[0] + "_" + convertToReadableIP(sess[1]) + "_" + 
+		return sess[0] + "_" + sess[1] + "_" + 
 				String.valueOf(ver) + "_" + 
-				convertToReadableIP(loc[0]) + "_" + convertToReadableIP(loc[1]);
+				loc[0] + "_" + loc[1];
 		//convertToReadableIP(loc[0]) + "_" + loc[1];
 	}
 
@@ -774,13 +747,12 @@ public class MyServlet extends HttpServlet
 	private InetAddress getIP()
 	{
 		InetAddress addr = null;
-		LOGGER.info(this.convertToReadableIP(SvrID));
 		if(SvrID == null){
 			setSvrID();
 		}
 		try 
 		{
-			addr = InetAddress.getByAddress(SvrID.getBytes());
+			addr = InetAddress.getByName(SvrID);
 		} 
 		catch (UnknownHostException e) 
 		{
@@ -1048,12 +1020,12 @@ public class MyServlet extends HttpServlet
 
 	//Basic view rules
 	public void RPCtimeout(InetAddress addr){
-		String ipAddress = inetaddrToString(addr);
+		String ipAddress = addr.getHostAddress();
 		View.remove(view, ipAddress);
 	}
 
 	public void RPCReceive(InetAddress addr){
-		String ipAddress = inetaddrToString(addr);
+		String ipAddress = addr.getHostAddress();
 		View.insert(view, ipAddress);
 	}
 
@@ -1072,28 +1044,23 @@ public class MyServlet extends HttpServlet
 					while (temp == null)
 					{
 						String ip = View.choose(view);
-						try {
-							if (ip.equals(inetaddrToString(InetAddress.getByName("0.0.0.0")))) 
-							{
-								// nothing's in view
-								temp = new View();
-								System.out.println("GOSSIP BREAK");
-								break;
+						if (ip.equals("0.0.0.0")) 
+						{
+							// nothing's in view
+							temp = new View();
+							System.out.println("GOSSIP BREAK");
+							break;
+						}
+						else
+						{
+							//		TODO: Need RPC call for GetView written
+							try {
+								System.out.println("GOSSIP: " + InetAddress.getByName(ip));
+								temp = getView(InetAddress.getByName(ip));
+							} catch (UnknownHostException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
 							}
-							else
-							{
-								//		TODO: Need RPC call for GetView written
-								try {
-									System.out.println("GOSSIP: " + InetAddress.getByAddress(ip.getBytes()));
-									temp = getView(InetAddress.getByAddress(ip.getBytes()));
-								} catch (UnknownHostException e) {
-									// TODO Auto-generated catch block
-									e.printStackTrace();
-								}
-							}
-						} catch (UnknownHostException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
 						}
 					}
 					System.out.println("Gossip temp: " + temp);
@@ -1146,21 +1113,21 @@ public class MyServlet extends HttpServlet
 		daemonThread.start();
 	}
 
-	private String convertToReadableIP(String addr) {
-		if (addr == null)
-		{
-			return "null";
-		}
-		byte[] bytes = addr.getBytes();
-		InetAddress a = null;
-		try {
-			a = InetAddress.getByAddress(bytes);
-			return a.getHostAddress();
-		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return null;
-	}
+//	private String convertToReadableIP(String addr) {
+//		if (addr == null)
+//		{
+//			return "null";
+//		}
+//		byte[] bytes = addr.getBytes();
+//		InetAddress a = null;
+//		try {
+//			a = InetAddress.getByAddress(bytes);
+//			return a.getHostAddress();
+//		} catch (UnknownHostException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		return null;
+//	}
 
 }

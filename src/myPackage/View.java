@@ -95,7 +95,7 @@ public class View {
 		String str = "";
 		for(String s : view){
 			if (!s.equals(null))
-				str += ViewDB.convertToReadableIP(s) + ", ";
+				str += s + ", ";
 		}
 		return str;
 	}
