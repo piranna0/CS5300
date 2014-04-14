@@ -117,6 +117,12 @@ public class MyServlet extends HttpServlet
 
 	
 	public void setSvrID(){
+//		try {
+//			SvrID = InetAddress.getLocalHost().getHostAddress();
+//		} catch (UnknownHostException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		Runtime r = Runtime.getRuntime();
 		Process blah;
 		String IPAddress = "0.0.0.0";
@@ -157,7 +163,7 @@ public class MyServlet extends HttpServlet
 		{
 			int sid = sessionID.getAndAdd(1);
 			sess[0] = String.valueOf(sid);
-			sess[1] = inetaddrToString(local_ip);
+			sess[1] = local_ip.getHostAddress();
 			ver = 1;
 			message = SvrID;
 			long curTime = System.currentTimeMillis() / 1000;
@@ -180,7 +186,7 @@ public class MyServlet extends HttpServlet
 				}
 				else
 				{
-					System.out.println(backup_ip);
+					System.out.println("backup: " + backup_ip);
 					reply = sessionWrite(sid, sess[1], ver, message, InetAddress.getByName(backup_ip));
 					if (reply == true)
 					{
@@ -201,7 +207,7 @@ public class MyServlet extends HttpServlet
 			c = new Cookie(cookieName, concatPrint(sess, ver, loc));
 			c.setMaxAge(SESSION_TIMEOUT_SECS);	// set timeout!!!
 			c.setComment(message);
-
+			System.out.println(c.getValue());
 			// send cookie back to client
 			response.addCookie(c);
 

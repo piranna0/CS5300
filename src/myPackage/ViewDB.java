@@ -106,7 +106,7 @@ public class ViewDB {
 				if(attr.getName().equals(IPAttribute)){
 					try {
 						View.insert(v, attr.getValue());
-						System.out.println(InetAddress.getByName(View.choose(v)));
+						System.out.println(InetAddress.getByName(attr.getValue()));
 					} catch (UnknownHostException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
