@@ -105,8 +105,8 @@ public class ViewDB {
 			for(Attribute attr : item.getAttributes()){
 				if(attr.getName().equals(IPAttribute)){
 					try {
-						View.insert(v, inetaddrToString(InetAddress.getByName(attr.getValue())));
-						System.out.println(InetAddress.getByAddress(View.choose(v).getBytes()));
+						View.insert(v, attr.getValue());
+						System.out.println(InetAddress.getByName(View.choose(v)));
 					} catch (UnknownHostException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -120,18 +120,18 @@ public class ViewDB {
 	}
 
 	//For testing readSDBView only
-	public static String convertToReadableIP(String addr) {
-		byte[] bytes = addr.getBytes();
-		InetAddress a;
-		try {
-			a = InetAddress.getByAddress(bytes);
-			return a.getHostAddress();
-		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return null;
-	}
+//	public static String convertToReadableIP(String addr) {
+//		byte[] bytes = addr.getBytes();
+//		InetAddress a;
+//		try {
+//			a = InetAddress.getByAddress(bytes);
+//			return a.getHostAddress();
+//		} catch (UnknownHostException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		return null;
+//	}
 
 	/*
 	 * TODO: Change Write so that it always writes ViewSz elements and then size. The deleting part scares me a little with concurrent accesses
@@ -147,7 +147,7 @@ public class ViewDB {
 		HashSet<String> ips = View.getIPs(v);
 		//Replace previous attributes with new IP addresses
 		for(String ip : ips){
-			String readableIP = convertToReadableIP(ip);
+			String readableIP = ip;
 			ReplaceableAttribute replaceAttributeType = new ReplaceableAttribute().withName(typeAttribute).
 					withValue(serverType).withReplace(true);
 			ReplaceableAttribute replaceAttribute = new ReplaceableAttribute().withName(IPAttribute).
