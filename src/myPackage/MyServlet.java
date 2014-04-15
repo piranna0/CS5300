@@ -821,10 +821,10 @@ public class MyServlet extends HttpServlet
 				recvCallId = bbuf.getInt();
 			} while(recvCallId != cid);
 			int success = bbuf.getInt();
-			if (success!=-1 && success==version) {
+			if (success==version) {
 				return new String(inBuf, 8, recvPkt.getLength()-8).trim();
 			} else {
-				return null;
+				return sessionReadHelper(cid, socket, outBuf, address, index+1, version);
 			}
 		} catch (SocketTimeoutException e){
 			e.printStackTrace();
@@ -962,7 +962,7 @@ public class MyServlet extends HttpServlet
 							int sessNum = bbuf.getInt();
 //							int sessionVersionNum = bbuf.getInt();
 							
-							String serverIdAddr = new String(inBuf, 13, recvPkt.getLength()-13);
+							String serverIdAddr = new String(inBuf, 9, recvPkt.getLength()-9);
 							serverIdAddr = serverIdAddr.trim();
 							SessionTuple sessTup = new SessionTuple(sessNum, serverIdAddr);
 							SessionState sessState = map.get(sessTup);
