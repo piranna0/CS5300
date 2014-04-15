@@ -31,22 +31,25 @@ public class MyServlet extends HttpServlet
 {
 	private static final long serialVersionUID = 1L;
 	private static final int ViewSz = 5;
-	private static AtomicInteger sessionID = new AtomicInteger();
-	private String cookieName = "CS5300PROJ1SESSION";
-	public static int SESSION_TIMEOUT_SECS = 60;
-	public static int DISCARD_TIME_DELTA = 1;
-	private static AtomicInteger callId = new AtomicInteger();
+	
 	private final byte SESSIONREAD = 0; // operation code
 	private final byte SESSIONWRITE = 1; // operation code
 	private final byte GETVIEW = 2; //operation code
+	
+	private String cookieName = "CS5300PROJ1SESSION";
 	private final int PORT = 5300;
-	private String SvrID;
+	
+	public static int SESSION_TIMEOUT_SECS = 60;
+	public static int DISCARD_TIME_DELTA = 1;
 	private static int TIMEOUT = 1000;
-
+	
 	private static int GOSSIP_MSECS = 20000;
 	private static int BOOTSTRAP_MSECS = 40000;
 
+	private String SvrID;
 	private View view = new View();
+	private static AtomicInteger sessionID = new AtomicInteger();
+	private static AtomicInteger callId = new AtomicInteger();
 
 	// Session State table, aka hash map used to store session information
 	// K: sessionID, V: SessionState
@@ -148,7 +151,7 @@ public class MyServlet extends HttpServlet
 			sess[0] = String.valueOf(sid);
 			sess[1] = local_ip.getHostAddress();
 			ver = 1;
-			message = SvrID;
+			message = "Hello User";
 			long curTime = System.currentTimeMillis() / 1000;
 			timeout = curTime + SESSION_TIMEOUT_SECS;
 
@@ -603,7 +606,7 @@ public class MyServlet extends HttpServlet
 			else if (action.equals("refresh"))
 			{
 				// retrieve message from cookie
-				message = reply + "readOccurred";
+				message = reply;
 			}
 			long curTime = System.currentTimeMillis() / 1000;
 			timeout = curTime + SESSION_TIMEOUT_SECS;
