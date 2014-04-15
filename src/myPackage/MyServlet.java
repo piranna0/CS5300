@@ -252,7 +252,7 @@ public class MyServlet extends HttpServlet
 			value = concatValue(sess, ver, loc);
 
 			// store new info to map
-			SessionTuple sessTup = new SessionTuple(sid, loc[0]);
+			SessionTuple sessTup = new SessionTuple(sid, sess[1]);
 			SessionState state = new SessionState(sessTup, ver, message, timeout);
 			//			sessionWrite(sid, loc[0], ver, message, InetAddress.getByName(SvrID));
 			map.put(sessTup, state);
@@ -343,7 +343,7 @@ public class MyServlet extends HttpServlet
 					value = concatValue(sess, ver, loc);
 
 					// store updated info to map (choose primary server)
-					SessionTuple sessTup = new SessionTuple(sid, loc[0]);
+					SessionTuple sessTup = new SessionTuple(sid, sess[1]);
 					SessionState state = new SessionState(sessTup, ver, message, timeout);
 					map.replace(sessTup, state);
 
@@ -439,7 +439,7 @@ public class MyServlet extends HttpServlet
 					value = concatValue(sess, ver, loc);
 
 					// store updated info to map (choose primary server)
-					SessionTuple sessTup = new SessionTuple(Integer.valueOf(sess[0]), loc[0]);
+					SessionTuple sessTup = new SessionTuple(Integer.valueOf(sess[0]), sess[1]);
 					SessionState state = new SessionState(sessTup, ver, message, timeout);
 					//					sessionWrite(Integer.valueOf(sess[0]), loc[0], ver, message, InetAddress.getByName(SvrID));
 					map.put(sessTup, state);
@@ -607,7 +607,7 @@ public class MyServlet extends HttpServlet
 					value = concatValue(sess, ver, loc);
 
 					// store updated info to map (choose primary server)
-					SessionTuple sessTup = new SessionTuple(sid, loc[0]);
+					SessionTuple sessTup = new SessionTuple(sid, sess[1]);
 					SessionState state = new SessionState(sessTup, ver, msg, timeout);
 					map.replace(sessTup, state);
 
@@ -719,7 +719,7 @@ public class MyServlet extends HttpServlet
 			value = concatValue(sess, ver, loc);
 
 			// store updated info to map (choose primary server)
-			SessionTuple sessTup = new SessionTuple(Integer.valueOf(sess[0]), loc[0]);
+			SessionTuple sessTup = new SessionTuple(Integer.valueOf(sess[0]), sess[1]);
 			SessionState state = new SessionState(sessTup, ver, message, timeout);
 			//			sessionWrite(Integer.valueOf(sess[0]), loc[0], ver, message, InetAddress.getByName(SvrID));
 			map.put(sessTup, state);
@@ -1106,10 +1106,13 @@ public class MyServlet extends HttpServlet
 
 							System.out.println("Read request: sessNum~" + sessNum + "/serverIdAddr~" + serverIdAddr + "/callId~" + cid + "/returnAddr~" + returnAddr.getHostAddress());
 							System.out.println("Map: -------------------------------------");
+							String debugMessage = "";
 							for (SessionTuple s : map.keySet()) {
 								SessionState state = map.get(s);
 								System.out.println("num: " + state.sessionID.sessionNum + " sid: " + state.sessionID.serverId + " msg: " + state.message);
+								debugMessage += "num: " + state.sessionID.sessionNum + " sid: " + state.sessionID.serverId + "\n";
 							}
+							debugMessage += "request: " + sessTup.sessionNum + " " + sessTup.serverId;
 							System.out.println("State: " + sessState);
 							if (sessState != null) {
 								bbuf = ByteBuffer.allocate(4 + 1 + sessState.message.length()*2);
@@ -1121,11 +1124,18 @@ public class MyServlet extends HttpServlet
 								System.out.println("success!");
 
 							} else {
-								bbuf = ByteBuffer.allocate(4 + 1);
+								String message = "ERROR: " + debugMessage;
+								bbuf = ByteBuffer.allocate(4 + 1 + message.length()*2);
 								bbuf.putInt(cid);
-								bbuf.put((byte) 0);
-
-								System.out.println("failure!");
+								bbuf.put((byte) 1);
+								for (byte b : message.getBytes()) {
+									bbuf.put(b);
+								}
+//								bbuf = ByteBuffer.allocate(4 + 1);
+//								bbuf.putInt(cid);
+//								bbuf.put((byte) 0);
+//
+//								System.out.println("failure!");
 							}
 							outBuf = bbuf.array();
 						} else if (opCode==SESSIONWRITE) {
