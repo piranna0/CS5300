@@ -21,10 +21,14 @@ Cookie format: sessionID_serverIP_versionNum_serverPrimary_serverBackup
 where <sessionID, serverIP> is the unique identifier for session states, and serverPrimary and serverBackup are primary and backup servers where the session state is stored.
 
 RPC messages format: 
+The methods sessionRead(...), sessionWrite(...), and getView(...) are wrappers for the corresponding RPC message calls that are in the same format as that specified on the project writeup
 sessionRead takes the <sessionId, serverIP> tuple, version number and IP addresses (the primary and backup servers) of the requested session state.
 sessionRead returns what's stored in the message field and version number of the requested session state if it exists (error is version = -1)
 sessionWrite takes the <sessionID, serverIP> tuple, version number, message, and IP address of the server that contains the session state that you wish to replace. 
 sessionWrite returns true if the session state is successfully replaced in the remote server, otherwise returns false. 
+getView takes in the address of the server whose view is requested
+getView returns a View object containing the IPs of the servers in the requested server's View
+
 
 Elastic Beanstalk setup procedure:
 - create an instance of Elastic Beanstalk environment on AWS management console, running on 64bit Amazon Linux
