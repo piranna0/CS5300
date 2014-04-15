@@ -156,15 +156,6 @@ public class MyServlet extends HttpServlet
 
 
 	public void setSvrID(){
-		try {
-			SvrID = InetAddress.getLocalHost().getHostAddress();
-		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-//		Runtime r = Runtime.getRuntime();
-//		Process blah;
-//		String IPAddress = "0.0.0.0";
 //		try {
 //			SvrID = InetAddress.getLocalHost().getHostAddress();
 //		} catch (UnknownHostException e) {
@@ -175,19 +166,28 @@ public class MyServlet extends HttpServlet
 //		Process blah;
 //		String IPAddress = "0.0.0.0";
 //		try {
-//			blah = r.exec("/opt/aws/bin/ec2-metadata --public-ipv4");
-//
-//			BufferedReader in = new BufferedReader(new InputStreamReader(blah.getInputStream()));
-//			String line = null;
-//			while((line = in.readLine()) != null){
-//				IPAddress = line;
-//			}
-//			SvrID = IPAddress.split(" ")[1];
-//		} catch (IOException e) {
+//			SvrID = InetAddress.getLocalHost().getHostAddress();
+//		} catch (UnknownHostException e) {
 //			// TODO Auto-generated catch block
 //			e.printStackTrace();
-//			setSvrID();
 //		}
+		Runtime r = Runtime.getRuntime();
+		Process blah;
+		String IPAddress = "0.0.0.0";
+		try {
+			blah = r.exec("/opt/aws/bin/ec2-metadata --public-ipv4");
+
+			BufferedReader in = new BufferedReader(new InputStreamReader(blah.getInputStream()));
+			String line = null;
+			while((line = in.readLine()) != null){
+				IPAddress = line;
+			}
+			SvrID = IPAddress.split(" ")[1];
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			setSvrID();
+		}
 	}
 	/**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
@@ -354,7 +354,7 @@ public class MyServlet extends HttpServlet
 					// forward information to jsp page
 					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
-					request.setAttribute("myLocation", "Existing session found locally in " + SvrID);
+					request.setAttribute("myLocation", "Existing session found LOCALLY in " + SvrID);
 					request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
 					request.setAttribute("myDis", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS + DISCARD_TIME_DELTA);
 					request.setAttribute("myView", view.toString());
@@ -451,7 +451,7 @@ public class MyServlet extends HttpServlet
 					// forward information to jsp page
 					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
-					request.setAttribute("myLocation", "Existing session found remotely in " + SvrID);
+					request.setAttribute("myLocation", "Existing session found REMOTELY in " + SvrID);
 					// TODO: have sessionRead return the serverIP who replied 
 					request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
 					request.setAttribute("myDis", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS + DISCARD_TIME_DELTA);
@@ -611,7 +611,7 @@ public class MyServlet extends HttpServlet
 					// forward information to jsp page
 					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
-					request.setAttribute("myLocation", "Existing session found locally in " + SvrID);
+					request.setAttribute("myLocation", "Existing session found LOCALLY in " + SvrID);
 					request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
 					request.setAttribute("myDis", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS + DISCARD_TIME_DELTA);
 					request.setAttribute("myView", view.toString());
@@ -724,7 +724,7 @@ public class MyServlet extends HttpServlet
 			// forward information to jsp page
 			request.setAttribute("myVal", concatPrint(sess, ver, loc));
 			request.setAttribute("myMessage", c.getComment());
-			request.setAttribute("myLocation", "Existing session found locally in " + SvrID);
+			request.setAttribute("myLocation", "Existing session found REMOTELY in " + SvrID);
 			// TODO: have sessionRead return the serverIP who replied 
 			request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
 			request.setAttribute("myDis", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS + DISCARD_TIME_DELTA);
