@@ -1,6 +1,6 @@
-Ansha Yu
+ay226 Ansha Yu
 gws55 Gene Shin 
-Jimmy Feher
+jkf49 James Feher
 
 
 There are 5 files in our source directory:
@@ -13,7 +13,7 @@ ViewDB.java: sets up the AmazonSimpleDB that stores the bootstrap and defines re
 And there are 5 files in our webcontent directory:
 error.jsp: redirects to this page on error.
 index.html: the default page that redirects to the servlet page.
-logout.jsp: redirects to ths page on log out.
+logout.jsp: redirects to this page on log out.
 myServlet.jsp: the main front-end of our web site from project 1a with additional information displayed (e.g. the server's view and the session data's primary/backup servers)
 timeout.jsp: redirects to this page on time out.
 
@@ -22,7 +22,7 @@ where <sessionID, serverIP> is the unique identifier for session states, and ser
 
 RPC messages format: 
 sessionRead takes the <sessionId, serverIP> tuple, version number and IP addresses (the primary and backup servers) of the requested session state.
-sessionRead returns what's stored in the message field of the requested session state.
+sessionRead returns what's stored in the message field and version number of the requested session state if it exists (error is version = -1)
 sessionWrite takes the <sessionID, serverIP> tuple, version number, message, and IP address of the server that contains the session state that you wish to replace. 
 sessionWrite returns true if the session state is successfully replaced in the remote server, otherwise returns false. 
 
