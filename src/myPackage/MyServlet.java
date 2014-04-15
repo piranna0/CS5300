@@ -3,18 +3,13 @@ package myPackage;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.net.UnknownHostException;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,7 +21,6 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.logging.Logger;
 
 
 /**
@@ -49,49 +43,10 @@ public class MyServlet extends HttpServlet
 	private String SvrID;
 	private static int TIMEOUT = 1000;
 
-	private static int GOSSIP_MSECS = 12000;
-	private static int BOOTSTRAP_MSECS = 12000;
+	private static int GOSSIP_MSECS = 20000;
+	private static int BOOTSTRAP_MSECS = 40000;
 
 	private View view = new View();
-
-	//	public static void main(String[] args) {
-	//		MyServlet m = new MyServlet();
-	//		m.rpcServer();
-	//		try {
-	//			InetAddress addr = InetAddress.getByName(m.SvrID);
-	//			byte[] bytes = addr.getAddress();
-	//			boolean b1 = m.sessionWrite(0, m.SvrID, 0, "thing", addr);
-	//			boolean b2 = m.sessionWrite(1, m.SvrID, 0, "blah", addr);
-	//			for (SessionTuple s : m.map.keySet()) {
-	//				System.out.println(s.serverId);
-	//				SessionState state = m.map.get(s);
-	//				System.out.println("sid: " + String.valueOf(s.serverId) + " num: " + s.sessionNum + " msg: " + state.message);
-	//			}
-	//			bytes[0] = 0;
-	//			boolean b3 = m.sessionWrite(1, m.SvrID, 0, "blah", InetAddress.getByAddress(bytes));
-	//			System.out.println(b1 && b2 );
-	//			System.out.println(b3);
-	//            InetAddress[] addrs = {addr};
-	//            String s1 = m.sessionRead(0, m.SvrID, 0, addrs);
-	//            String s2 = m.sessionRead(1, m.SvrID, 0, addrs);
-	//            View v = m.getView(addr);
-	//            System.out.println("View: " + v.toString());
-	//            System.out.println(s1 + "/" + s2);
-	//            Thread.sleep(17000);
-	//            byte[] zeros = {0,0,0,0};
-	//            InetAddress a = InetAddress.getByAddress(zeros);
-	//            InetAddress[] addrss = {a, addr};
-	//            s1 = m.sessionRead(0, m.SvrID, 0, addrss);
-	//            System.out.println("later: " + s1);
-	//
-	//		} catch (UnknownHostException e) {
-	//			// TODO Auto-generated catch block
-	//			e.printStackTrace();
-	//		} catch (InterruptedException e) {
-	//			// TODO Auto-generated catch block
-	//			e.printStackTrace();
-	//		}
-	//	}
 
 	// Session State table, aka hash map used to store session information
 	// K: sessionID, V: SessionState
@@ -107,15 +62,12 @@ public class MyServlet extends HttpServlet
 			{
 				while(true)
 				{
-					//                  System.out.println("gc:" + map.keySet().size() + " session(s)");
 					for (SessionTuple tup : map.keySet())
 					{
 						SessionState state = map.get(tup);
-						//                      System.out.println("gc:" + convertToReadableIP(tup.serverId) + "/" + tup.sessionNum + " has " + (state.timeout - (int)(System.currentTimeMillis()/1000)) + " seconds left");
 						if (state.timeout < (int)(System.currentTimeMillis()/1000))
 						{
 							SessionState s = map.remove(tup);
-							System.out.println("gc:removed <" + tup.serverId + "/" + tup.sessionNum + ", " + s.sessionID.serverId + ">");
 						}
 					}
 					try {
@@ -130,21 +82,12 @@ public class MyServlet extends HttpServlet
 		daemonThread.start();
 	}
 
-	private static Logger LOGGER;
 	/**
 	 * @see HttpServlet#HttpServlet()
 	 */
 	public MyServlet() {
 		super();
-		//				try {
-		//					SvrID = InetAddress.getLocalHost().getHostAddress();
-		//					System.out.println("ServerId " + SvrID);
-		//				} catch (UnknownHostException e) {
-		//					// TODO Auto-generated catch block
-		//					e.printStackTrace();
-		//				}
 		map = new ConcurrentHashMap<SessionTuple, SessionState>();
-		LOGGER= Logger.getLogger(getClass().getName());
 		setSvrID();
 
 		garbageCollector(); 
@@ -212,14 +155,12 @@ public class MyServlet extends HttpServlet
 			loc[0] = SvrID;
 
 			// choose a backup server from view and call SessionWrite()
-			// TODO: debug dis
 			boolean reply = false;
 			View myCopy = View.copy(view);
 			while (reply == false)
 			{
 				String backup_ip = View.choose(myCopy);
 				View.remove(myCopy, backup_ip);
-				System.out.println("BACKUP IP: " + backup_ip); 
 				if (backup_ip.equals("0.0.0.0")) 
 				{
 					// nothing's in view
@@ -228,7 +169,6 @@ public class MyServlet extends HttpServlet
 				}
 				else
 				{
-					System.out.println("backup: " + backup_ip);
 					reply = sessionWrite(sid, sess[1], ver, message, InetAddress.getByName(backup_ip));
 					if (reply == true)
 					{
@@ -237,7 +177,6 @@ public class MyServlet extends HttpServlet
 					}
 					else{
 						RPCtimeout(InetAddress.getByName(backup_ip));
-						System.out.println("View: " + view);
 					}
 				}
 			}
@@ -246,15 +185,13 @@ public class MyServlet extends HttpServlet
 			// store new info to map
 			SessionTuple sessTup = new SessionTuple(sid, sess[1]);
 			SessionState state = new SessionState(sessTup, ver, message, timeout);
-			//			sessionWrite(sid, loc[0], ver, message, InetAddress.getByName(SvrID));
 			map.put(sessTup, state);
 
 			// construct cookie
-			//TODO: Correct constructor?
 			c = new Cookie(cookieName, concatPrint(sess, ver, loc));
 			c.setMaxAge(SESSION_TIMEOUT_SECS);	// set timeout!!!
 			c.setComment(message);
-			//			System.out.println(c.getValue());
+			
 			// send cookie back to client
 			response.addCookie(c);
 
@@ -287,6 +224,7 @@ public class MyServlet extends HttpServlet
 					{
 						// forward information to jsp page and display it
 						request.setAttribute("loc", "line 242");
+						
 						// send a dead cookie
 						Cookie myDeadCookie = new Cookie(cookieName, "");
 						myDeadCookie.setMaxAge(0);
@@ -295,7 +233,6 @@ public class MyServlet extends HttpServlet
 						// send cookie back to client
 						response.addCookie(myDeadCookie);
 						request.getRequestDispatcher("/error.jsp").forward(request, response);
-						//						TODO: Send timeout zero cookie on failures
 						return;
 					}
 					ver = ss.version;
@@ -306,7 +243,6 @@ public class MyServlet extends HttpServlet
 					loc[0] = SvrID;
 
 					// choose a backup server from view and call SessionWrite()
-					// TODO: debug dis
 					boolean reply = false;
 					View myCopy = View.copy(view);
 					while (reply == false)
@@ -402,7 +338,6 @@ public class MyServlet extends HttpServlet
 					loc[0] = SvrID;
 
 					// choose a backup server from view and call SessionWrite()
-					// TODO: debug dis
 					boolean rep = false;
 					View myCopy = View.copy(view);
 					while (rep == false)
@@ -433,7 +368,6 @@ public class MyServlet extends HttpServlet
 					// store updated info to map (choose primary server)
 					SessionTuple sessTup = new SessionTuple(Integer.valueOf(sess[0]), sess[1]);
 					SessionState state = new SessionState(sessTup, ver, message, timeout);
-					//					sessionWrite(Integer.valueOf(sess[0]), loc[0], ver, message, InetAddress.getByName(SvrID));
 					map.put(sessTup, state);
 
 					// kill current cookie
@@ -451,7 +385,7 @@ public class MyServlet extends HttpServlet
 					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
 					request.setAttribute("myLocation", "Existing session found REMOTELY in " + SvrID);
-					// TODO: have sessionRead return the serverIP who replied 
+
 					request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
 					request.setAttribute("myDis", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS + DISCARD_TIME_DELTA);
 					request.setAttribute("myView", view.toString());
@@ -474,14 +408,6 @@ public class MyServlet extends HttpServlet
 		// in the case of time-out, redirect to time-out page
 		if (myCookie == null)
 		{
-			//			// send a dead cookie
-			//			Cookie myDeadCookie = new Cookie(cookieName, "");
-			//			myDeadCookie.setMaxAge(0);
-			//			myDeadCookie.setValue(null);
-			//			
-			//			// send cookie back to client
-			//			response.addCookie(myDeadCookie);
-
 			// forward information to jsp page and display it
 			request.getRequestDispatcher("/timeout.jsp").forward(request, response);
 
@@ -569,7 +495,6 @@ public class MyServlet extends HttpServlet
 					loc[0] = SvrID;
 
 					// choose a backup server from view and call SessionWrite()
-					// TODO: debug dis
 					boolean reply = false;
 					View myCopy = View.copy(view);
 					while (reply == false)
@@ -644,7 +569,6 @@ public class MyServlet extends HttpServlet
 			{
 				// RPC call
 				reply = sessionRead(sessNum, servNum, verNum, inetLocs);
-				System.out.println(reply);
 				if (reply == null)
 				{
 					// send a dead cookie
@@ -682,7 +606,6 @@ public class MyServlet extends HttpServlet
 			loc[0] = SvrID;
 
 			// choose a backup server from view and call SessionWrite()
-			// TODO: debug dis
 			boolean rep = false;
 			View myCopy = View.copy(view);
 			while (rep == false)
@@ -713,7 +636,6 @@ public class MyServlet extends HttpServlet
 			// store updated info to map (choose primary server)
 			SessionTuple sessTup = new SessionTuple(Integer.valueOf(sess[0]), sess[1]);
 			SessionState state = new SessionState(sessTup, ver, message, timeout);
-			//			sessionWrite(Integer.valueOf(sess[0]), loc[0], ver, message, InetAddress.getByName(SvrID));
 			map.put(sessTup, state);
 
 			// kill current cookie
@@ -731,7 +653,7 @@ public class MyServlet extends HttpServlet
 			request.setAttribute("myVal", concatPrint(sess, ver, loc));
 			request.setAttribute("myMessage", c.getComment());
 			request.setAttribute("myLocation", "Existing session found REMOTELY in " + SvrID);
-			// TODO: have sessionRead return the serverIP who replied 
+
 			request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
 			request.setAttribute("myDis", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS + DISCARD_TIME_DELTA);
 			request.setAttribute("myView", view.toString());
@@ -829,16 +751,12 @@ public class MyServlet extends HttpServlet
 		return sess[0] + "_" + sess[1] + "_" + 
 				String.valueOf(ver) + "_" + 
 				loc[0] + "_" + loc[1];
-		//convertToReadableIP(loc[0]) + "_" + loc[1];
 	}
 
 	// running on local tomcat
 	private InetAddress getIP()
 	{
 		InetAddress addr = null;
-		if(SvrID == null){
-			//			setSvrID();
-		}
 		try 
 		{
 			addr = InetAddress.getByName(SvrID);
@@ -847,10 +765,6 @@ public class MyServlet extends HttpServlet
 		{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
-		if(addr == null){
-			//			setSvrID();
-			//			return getIP();
 		}
 		return addr;
 	}
@@ -878,8 +792,6 @@ public class MyServlet extends HttpServlet
 			return ret;
 		} catch (SocketException e) {
 			// DatagramSocket could not be opened
-			System.out.println("SessionRead: SocketException");
-			e.printStackTrace();
 		}
 		return null;
 	}
@@ -905,19 +817,15 @@ public class MyServlet extends HttpServlet
 			} while(recvCallId != cid);
 			byte success = bbuf.get();
 			if (success==1) {
-				System.out.println("SessionRead: success = " + success);
 				return new String(inBuf, 5, recvPkt.getLength()-5).trim();
 			} else {
-				System.out.println("SessionRead: success = " + success);
 				return null;
 			}
 		} catch (SocketTimeoutException e){
-			System.out.println("SessionRead: SocketTimeoutException");
 			e.printStackTrace();
 			RPCtimeout(address[index]);
 			return sessionReadHelper(cid, socket, outBuf, address, index+1);
 		}catch (IOException e) {
-			System.out.println("SessionRead: IOException");
 			//send failed or timeout
 			e.printStackTrace();
 			RPCtimeout(address[index]);
@@ -964,11 +872,9 @@ public class MyServlet extends HttpServlet
 			e.printStackTrace();
 		} catch (SocketTimeoutException e){
 			RPCtimeout(address);
-			//			e.printStackTrace();
 		} catch (IOException e) {
 			//send failed or timeout
 			RPCtimeout(address);
-			e.printStackTrace();
 		}
 		return false;
 	}
@@ -1005,31 +911,6 @@ public class MyServlet extends HttpServlet
 				}
 			}
 
-			//			while (true) {
-			//				StringBuffer stringbuf = new StringBuffer();
-			//				try {
-			//					char c = bbuf.getChar();
-			//					boolean zero = true;
-			//					while (c!='_') {
-			//						zero = zero && (c==0);
-			//						stringbuf.append(c);
-			//						bbuf.getChar();
-			//					}
-			//					if (zero) { // we are reading all zeros
-			//						break;
-			//					}
-			//					View.insert(recvView, stringbuf.toString());
-			//				} catch (BufferUnderflowException e) {
-			//					break; // no more bytes left
-			//				}
-			//			}
-
-			//			for (int i = 4; i<recvPkt.getLength()-4; i+=4) {
-			//				if (inBuf[i]==0 && inBuf[i+1]==0 && inBuf[i+2]==0 && inBuf[i+3]==0) {
-			//					break;
-			//				}
-			//				View.insert(recvView, new String(inBuf, i, 4));
-			//			}
 			rpcSocket.close();
 			return recvView;
 		} catch (SocketException e) {
@@ -1073,94 +954,45 @@ public class MyServlet extends HttpServlet
 
 						byte[] outBuf = null;
 						if (opCode == SESSIONREAD) {
-							System.out.println("ENTER READ");
 							int sessNum = bbuf.getInt();
-							System.out.println("Session number: " + sessNum);
 							int sessionVersionNum = bbuf.getInt();
-							//							StringBuffer stringbuf = new StringBuffer();
-							//							boolean valid = true;
-							//							try {
-							//								char c = bbuf.getChar();
-							//								while (c!=0 && valid) {
-							//									stringbuf.append(c);
-							//									c = bbuf.getChar();
-							//									System.out.println(c);
-							//								}
-							//							} catch (BufferUnderflowException e) {
-							//								// nothing more to read
-							//								valid = false;
-							//							}
-							//							String serverIdAddr = stringbuf.toString();
+							
 							String serverIdAddr = new String(inBuf, 13, recvPkt.getLength()-13);
 							serverIdAddr = serverIdAddr.trim();
 							SessionTuple sessTup = new SessionTuple(sessNum, serverIdAddr);
 							SessionState sessState = map.get(sessTup);
-
-							System.out.println("Read request: sessNum~" + sessNum + "/serverIdAddr~" + serverIdAddr + "/callId~" + cid + "/returnAddr~" + returnAddr.getHostAddress());
-							System.out.println("Map: -------------------------------------");
+							
 							String debugMessage = "";
 							for (SessionTuple s : map.keySet()) {
 								SessionState state = map.get(s);
-								System.out.println("num: " + state.sessionID.sessionNum + " sid: " + state.sessionID.serverId + " msg: " + state.message);
 								debugMessage += "num: " + state.sessionID.sessionNum + " sid: " + state.sessionID.serverId + "\n";
 							}
 							debugMessage += "request: " + sessTup.sessionNum + " " + sessTup.serverId;
-							System.out.println("State: " + sessState);
-							if (sessState != null) {
+							if (sessState != null && sessState.version == sessionVersionNum) {
 								bbuf = ByteBuffer.allocate(4 + 1 + sessState.message.length()*2);
 								bbuf.putInt(cid);
 								bbuf.put((byte) 1);
 								for (byte b : sessState.message.getBytes()) {
 									bbuf.put(b);
 								}
-								System.out.println("success!");
 
 							} else {
-								String message = "ERROR: " + debugMessage;
-								bbuf = ByteBuffer.allocate(4 + 1 + message.length()*2);
+								bbuf = ByteBuffer.allocate(4 + 1);
 								bbuf.putInt(cid);
-								bbuf.put((byte) 1);
-								for (byte b : message.getBytes()) {
-									bbuf.put(b);
-								}
-//								bbuf = ByteBuffer.allocate(4 + 1);
-//								bbuf.putInt(cid);
-//								bbuf.put((byte) 0);
-//
-//								System.out.println("failure!");
+								bbuf.put((byte) 0);
 							}
 							outBuf = bbuf.array();
 						} else if (opCode==SESSIONWRITE) {
-							System.out.println("ENTER Write");
 							int sessNum = bbuf.getInt();
 							//							bbuf.getInt(); // increment by four bytes (the same four used to make the serverId below)
 							int sessionVersionNum = bbuf.getInt();
 							long discardTime = bbuf.getLong();
-							//							StringBuffer stringbuf = new StringBuffer();
-							//							char c = bbuf.getChar();
-							//							while (c!='_') {
-							//								stringbuf.append(c);
-							//								c = bbuf.getChar();
-							//							}
-							//							String serverIdAddr = stringbuf.toString();
-							//							StringBuffer msgbuf = new StringBuffer();
-							//							boolean valid = true;
-							//							try {
-							//								c = bbuf.getChar();
-							//								while (c!=0 && valid) {
-							//									msgbuf.append(c);
-							//									c = bbuf.getChar();
-							//								}
-							//							} catch (BufferUnderflowException e) {
-							//								valid = false;
-							//							}
+							
 							String all = new String(inBuf, 21 , recvPkt.getLength()-21);
 							all = all.trim();
 							String[] sid_and_msg = all.split("_", 2);
 							String serverIdAddr = sid_and_msg[0];
 							String msg = sid_and_msg[1];
-							//							String msg = msgbuf.toString();
-							//							msg = msg.trim();
 
 							SessionTuple sessTup = new SessionTuple(sessNum, serverIdAddr);
 							SessionState sessState = new SessionState(sessTup, sessionVersionNum, msg, discardTime);
@@ -1169,9 +1001,7 @@ public class MyServlet extends HttpServlet
 							bbuf = ByteBuffer.allocate(4);
 							bbuf.putInt(cid);
 							outBuf = bbuf.array();
-							System.out.println("EXIT WRITE");
 						} else if (opCode==GETVIEW) {
-							System.out.println("ENTER GET");
 							HashSet<String> viewips = View.getIPs(view);
 							int totallength = 0;
 							for (String s : viewips) {
@@ -1184,7 +1014,6 @@ public class MyServlet extends HttpServlet
 								bbuf.put("_".getBytes());
 							}
 							outBuf = bbuf.array();
-							System.out.println("EXIT GET");
 						}
 						DatagramPacket sendPkt = new DatagramPacket(outBuf, outBuf.length, returnAddr, returnPort);
 						try {
@@ -1238,23 +1067,18 @@ public class MyServlet extends HttpServlet
 						{
 							// nothing's in view
 							temp = new View();
-							//							System.out.println("GOSSIP BREAK");
 							break;
 						}
 						else
 						{
-							//		TODO: Need RPC call for GetView written
 							try {
-								//								System.out.println("GOSSIP: " + InetAddress.getByName(ip));
-								temp = getView(InetAddress.getByName(ip));				// TODO: this always returns null (socket timeout)
+								temp = getView(InetAddress.getByName(ip));
 							} catch (UnknownHostException e) {
 								// TODO Auto-generated catch block
 								e.printStackTrace();
 							}
 						}
 					}
-					//					System.out.println("Gossip temp: " + temp);
-					//					System.out.println("Gossip view: " + view);
 					View.union(temp, view);
 					View.remove(temp, SvrID);
 					View.shrink(temp, ViewSz);
@@ -1281,13 +1105,11 @@ public class MyServlet extends HttpServlet
 				while(true)
 				{
 					View temp = ViewDB.readSDBView(ViewSz);
-					//					System.out.println("BootStrap temp: " + temp);
-					//					System.out.println("BootStrap view: " + view);
 					View.remove(temp, SvrID);
 					View.union(temp, view);
 					View.shrink(temp, ViewSz);
 					view = View.copy(temp);
-					//					System.out.println("BootStrap view2: " + view);
+
 					View.insert(temp, SvrID);
 					View.shrink(temp, ViewSz);
 					ViewDB.writeSDBView(temp, ViewSz);
@@ -1302,22 +1124,4 @@ public class MyServlet extends HttpServlet
 		daemonThread.setDaemon(true);	// making this thread daemon
 		daemonThread.start();
 	}
-
-	//	private String convertToReadableIP(String addr) {
-	//		if (addr == null)
-	//		{
-	//			return "null";
-	//		}
-	//		byte[] bytes = addr.getBytes();
-	//		InetAddress a = null;
-	//		try {
-	//			a = InetAddress.getByAddress(bytes);
-	//			return a.getHostAddress();
-	//		} catch (UnknownHostException e) {
-	//			// TODO Auto-generated catch block
-	//			e.printStackTrace();
-	//		}
-	//		return null;
-	//	}
-
 }
