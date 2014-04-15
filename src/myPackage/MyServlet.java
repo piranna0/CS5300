@@ -156,39 +156,13 @@ public class MyServlet extends HttpServlet
 
 
 	public void setSvrID(){
-<<<<<<< HEAD
 //		try {
 //			SvrID = InetAddress.getLocalHost().getHostAddress();
 //		} catch (UnknownHostException e) {
 //			// TODO Auto-generated catch block
 //			e.printStackTrace();
 //		}
-//		Runtime r = Runtime.getRuntime();
-//		Process blah;
-//		String IPAddress = "0.0.0.0";
-//		try {
-//			SvrID = InetAddress.getLocalHost().getHostAddress();
-//		} catch (UnknownHostException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-=======
-		//		try {
-		//			SvrID = InetAddress.getLocalHost().getHostAddress();
-		//		} catch (UnknownHostException e) {
-		//			// TODO Auto-generated catch block
-		//			e.printStackTrace();
-		//		}
-		//		Runtime r = Runtime.getRuntime();
-		//		Process blah;
-		//		String IPAddress = "0.0.0.0";
-		//		try {
-		//			SvrID = InetAddress.getLocalHost().getHostAddress();
-		//		} catch (UnknownHostException e) {
-		//			// TODO Auto-generated catch block
-		//			e.printStackTrace();
-		//		}
->>>>>>> 97cc196a833bcdba9a124b4d803245e2b8e619df
+
 		Runtime r = Runtime.getRuntime();
 		Process blah;
 		String IPAddress = "0.0.0.0";
