@@ -156,23 +156,6 @@ public class MyServlet extends HttpServlet
 
 
 	public void setSvrID(){
-<<<<<<< HEAD
-//		try {
-//			SvrID = InetAddress.getLocalHost().getHostAddress();
-//		} catch (UnknownHostException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		Runtime r = Runtime.getRuntime();
-//		Process blah;
-//		String IPAddress = "0.0.0.0";
-//		try {
-//			SvrID = InetAddress.getLocalHost().getHostAddress();
-//		} catch (UnknownHostException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-=======
 		//		try {
 		//			SvrID = InetAddress.getLocalHost().getHostAddress();
 		//		} catch (UnknownHostException e) {
@@ -188,7 +171,6 @@ public class MyServlet extends HttpServlet
 		//			// TODO Auto-generated catch block
 		//			e.printStackTrace();
 		//		}
->>>>>>> 97cc196a833bcdba9a124b4d803245e2b8e619df
 		Runtime r = Runtime.getRuntime();
 		Process blah;
 		String IPAddress = "0.0.0.0";
@@ -285,6 +267,7 @@ public class MyServlet extends HttpServlet
 			response.addCookie(c);
 
 			// forward information to jsp page
+			request.setAttribute("myLocal", SvrID);
 			request.setAttribute("myVal", concatPrint(sess, ver, loc));
 			request.setAttribute("myMessage", c.getComment());
 			request.setAttribute("myLocation", "New session created and stored in " + SvrID);
@@ -377,6 +360,7 @@ public class MyServlet extends HttpServlet
 					response.addCookie(c);
 
 					// forward information to jsp page
+					request.setAttribute("myLocal", SvrID);
 					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
 					request.setAttribute("myLocation", "Existing session found LOCALLY in " + SvrID);
@@ -474,6 +458,7 @@ public class MyServlet extends HttpServlet
 					response.addCookie(c);
 
 					// forward information to jsp page
+					request.setAttribute("myLocal", SvrID);
 					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
 					request.setAttribute("myLocation", "Existing session found REMOTELY in " + SvrID);
@@ -641,6 +626,7 @@ public class MyServlet extends HttpServlet
 					response.addCookie(c);
 
 					// forward information to jsp page
+					request.setAttribute("myLocal", SvrID);
 					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
 					request.setAttribute("myLocation", "Existing session found LOCALLY in " + SvrID);
@@ -754,6 +740,7 @@ public class MyServlet extends HttpServlet
 			response.addCookie(c);
 
 			// forward information to jsp page
+			request.setAttribute("myLocal", SvrID);
 			request.setAttribute("myVal", concatPrint(sess, ver, loc));
 			request.setAttribute("myMessage", c.getComment());
 			request.setAttribute("myLocation", "Existing session found REMOTELY in " + SvrID);
