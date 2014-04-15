@@ -785,14 +785,14 @@ public class MyServlet extends HttpServlet
 			rpcSocket.setSoTimeout(TIMEOUT * 2); //TODO: 2 is the number of possible RPC calls made
 			int newCallId = callId.getAndAdd(1);
 
-			ByteBuffer bbuf = ByteBuffer.allocate(3*4 + 1 + 2*serverId.length()); //3 ints + 1 byte + 1 string
+			ByteBuffer bbuf = ByteBuffer.allocate(2*4 + 1 + 2*serverId.length()); //3 ints + 1 byte + 1 string
 			bbuf.putInt(newCallId);
 			bbuf.put(SESSIONREAD);
 			bbuf.putInt(sessNum);
-			bbuf.putInt(sessVersionNum);
+//			bbuf.putInt(sessVersionNum);
 			bbuf.put(serverId.getBytes());
 			byte[] outBuf = bbuf.array();
-			String ret = sessionReadHelper(newCallId, rpcSocket, outBuf, address, 0);
+			String ret = sessionReadHelper(newCallId, rpcSocket, outBuf, address, 0, sessVersionNum);
 			rpcSocket.close();
 			return ret;
 		} catch (SocketException e) {
@@ -801,7 +801,7 @@ public class MyServlet extends HttpServlet
 		return null;
 	}
 
-	private String sessionReadHelper(int cid, DatagramSocket socket, byte[] outBuf, InetAddress[] address, int index) {
+	private String sessionReadHelper(int cid, DatagramSocket socket, byte[] outBuf, InetAddress[] address, int index, int version) {
 		// failed on all calls
 		if (index >= address.length) {
 			return null;
@@ -820,21 +820,21 @@ public class MyServlet extends HttpServlet
 				bbuf = ByteBuffer.wrap(inBuf);
 				recvCallId = bbuf.getInt();
 			} while(recvCallId != cid);
-			byte success = bbuf.get();
-			if (success==1) {
-				return new String(inBuf, 5, recvPkt.getLength()-5).trim();
+			int success = bbuf.getInt();
+			if (success!=-1 && success==version) {
+				return new String(inBuf, 8, recvPkt.getLength()-8).trim();
 			} else {
 				return null;
 			}
 		} catch (SocketTimeoutException e){
 			e.printStackTrace();
 			RPCtimeout(address[index]);
-			return sessionReadHelper(cid, socket, outBuf, address, index+1);
+			return sessionReadHelper(cid, socket, outBuf, address, index+1, version);
 		}catch (IOException e) {
 			//send failed or timeout
 			e.printStackTrace();
 			RPCtimeout(address[index]);
-			return sessionReadHelper(cid, socket, outBuf, address, index+1);
+			return sessionReadHelper(cid, socket, outBuf, address, index+1, version);
 		}
 	}
 
@@ -960,7 +960,7 @@ public class MyServlet extends HttpServlet
 						byte[] outBuf = null;
 						if (opCode == SESSIONREAD) {
 							int sessNum = bbuf.getInt();
-							int sessionVersionNum = bbuf.getInt();
+//							int sessionVersionNum = bbuf.getInt();
 							
 							String serverIdAddr = new String(inBuf, 13, recvPkt.getLength()-13);
 							serverIdAddr = serverIdAddr.trim();
@@ -973,18 +973,18 @@ public class MyServlet extends HttpServlet
 								debugMessage += "num: " + state.sessionID.sessionNum + " sid: " + state.sessionID.serverId + "\n";
 							}
 							debugMessage += "request: " + sessTup.sessionNum + " " + sessTup.serverId;
-							if (sessState != null && sessState.version == sessionVersionNum) {
-								bbuf = ByteBuffer.allocate(4 + 1 + sessState.message.length()*2);
+							if (sessState != null) {
+								bbuf = ByteBuffer.allocate(4 + 4 + sessState.message.length()*2);
 								bbuf.putInt(cid);
-								bbuf.put((byte) 1);
+								bbuf.putInt(sessState.version);
 								for (byte b : sessState.message.getBytes()) {
 									bbuf.put(b);
 								}
 
 							} else {
-								bbuf = ByteBuffer.allocate(4 + 1);
+								bbuf = ByteBuffer.allocate(4 + 4);
 								bbuf.putInt(cid);
-								bbuf.put((byte) 0);
+								bbuf.putInt(-1);
 							}
 							outBuf = bbuf.array();
 						} else if (opCode==SESSIONWRITE) {
