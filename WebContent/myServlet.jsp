@@ -25,6 +25,10 @@ View: ${myView}
 
 <table style="width:600px">
 <tr>
+	<td align="right">Local Server: </td>
+	<td>${myLocal}</td>
+</tr>
+<tr>
 	<td align="right">Cookie Value: </td>
 	<td>${myVal}</td>
 </tr>

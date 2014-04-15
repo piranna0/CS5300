@@ -196,6 +196,7 @@ public class MyServlet extends HttpServlet
 			response.addCookie(c);
 
 			// forward information to jsp page
+			request.setAttribute("myLocal", SvrID);
 			request.setAttribute("myVal", concatPrint(sess, ver, loc));
 			request.setAttribute("myMessage", c.getComment());
 			request.setAttribute("myLocation", "New session created and stored in " + SvrID);
@@ -287,6 +288,7 @@ public class MyServlet extends HttpServlet
 					response.addCookie(c);
 
 					// forward information to jsp page
+					request.setAttribute("myLocal", SvrID);
 					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
 					request.setAttribute("myLocation", "Existing session found LOCALLY in " + SvrID);
@@ -382,6 +384,7 @@ public class MyServlet extends HttpServlet
 					response.addCookie(c);
 
 					// forward information to jsp page
+					request.setAttribute("myLocal", SvrID);
 					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
 					request.setAttribute("myLocation", "Existing session found REMOTELY in " + SvrID);
@@ -540,6 +543,7 @@ public class MyServlet extends HttpServlet
 					response.addCookie(c);
 
 					// forward information to jsp page
+					request.setAttribute("myLocal", SvrID);
 					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
 					request.setAttribute("myLocation", "Existing session found LOCALLY in " + SvrID);
@@ -650,6 +654,7 @@ public class MyServlet extends HttpServlet
 			response.addCookie(c);
 
 			// forward information to jsp page
+			request.setAttribute("myLocal", SvrID);
 			request.setAttribute("myVal", concatPrint(sess, ver, loc));
 			request.setAttribute("myMessage", c.getComment());
 			request.setAttribute("myLocation", "Existing session found REMOTELY in " + SvrID);
