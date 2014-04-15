@@ -2,6 +2,7 @@ ay226 Ansha Yu
 gws55 Gene Shin 
 jkf49 James Feher
 
+The index url is /Project1bFinal where there is a link to direct you to the servlet, /Project1bFinal/MyServlet
 
 There are 5 files in our source directory:
 MyServlet.java: the servlet code. Handles server requests, creates and stores session state data, executes RPC calls when necessary, spawns the four daemon threads (garbage collector, bootstrap updater, gossiper, and the RPC server) and returns cookies and the servlet web-page to the client.
