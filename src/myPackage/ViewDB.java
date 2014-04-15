@@ -104,14 +104,9 @@ public class ViewDB {
 		for(Item item : sr.getItems()){
 			for(Attribute attr : item.getAttributes()){
 				if(attr.getName().equals(IPAttribute)){
-					try {
-						if (!attr.getValue().equals("0:0:0:0:0:0:0:1"))		// TODO i added this
-							View.insert(v, attr.getValue());
-						System.out.println(InetAddress.getByName(attr.getValue()));
-					} catch (UnknownHostException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+					if (!attr.getValue().equals("0:0:0:0:0:0:0:1"))		// TODO i added this
+						View.insert(v, attr.getValue());
+//						System.out.println(InetAddress.getByName(attr.getValue()));
 					//					System.out.println("attr:" + attr.getValue());
 					break;
 				}

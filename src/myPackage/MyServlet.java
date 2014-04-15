@@ -135,7 +135,7 @@ public class MyServlet extends HttpServlet
 	 * @see HttpServlet#HttpServlet()
 	 */
 	public MyServlet() {
-				super();
+		super();
 		//				try {
 		//					SvrID = InetAddress.getLocalHost().getHostAddress();
 		//					System.out.println("ServerId " + SvrID);
@@ -156,38 +156,38 @@ public class MyServlet extends HttpServlet
 
 
 	public void setSvrID(){
+		//		try {
+		//			SvrID = InetAddress.getLocalHost().getHostAddress();
+		//		} catch (UnknownHostException e) {
+		//			// TODO Auto-generated catch block
+		//			e.printStackTrace();
+		//		}
+		//		Runtime r = Runtime.getRuntime();
+		//		Process blah;
+		//		String IPAddress = "0.0.0.0";
+		//		try {
+		//			SvrID = InetAddress.getLocalHost().getHostAddress();
+		//		} catch (UnknownHostException e) {
+		//			// TODO Auto-generated catch block
+		//			e.printStackTrace();
+		//		}
+		Runtime r = Runtime.getRuntime();
+		Process blah;
+		String IPAddress = "0.0.0.0";
 		try {
-			SvrID = InetAddress.getLocalHost().getHostAddress();
-		} catch (UnknownHostException e) {
+			blah = r.exec("/opt/aws/bin/ec2-metadata --public-ipv4");
+
+			BufferedReader in = new BufferedReader(new InputStreamReader(blah.getInputStream()));
+			String line = null;
+			while((line = in.readLine()) != null){
+				IPAddress = line;
+			}
+			SvrID = IPAddress.split(" ")[1];
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			setSvrID();
 		}
-//		Runtime r = Runtime.getRuntime();
-//		Process blah;
-//		String IPAddress = "0.0.0.0";
-//		try {
-//			SvrID = InetAddress.getLocalHost().getHostAddress();
-//		} catch (UnknownHostException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		Runtime r = Runtime.getRuntime();
-//		Process blah;
-//		String IPAddress = "0.0.0.0";
-//		try {
-//			blah = r.exec("/opt/aws/bin/ec2-metadata --public-ipv4");
-//
-//			BufferedReader in = new BufferedReader(new InputStreamReader(blah.getInputStream()));
-//			String line = null;
-//			while((line = in.readLine()) != null){
-//				IPAddress = line;
-//			}
-//			SvrID = IPAddress.split(" ")[1];
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//			setSvrID();
-//		}
 	}
 	/**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
@@ -254,7 +254,7 @@ public class MyServlet extends HttpServlet
 			// store new info to map
 			SessionTuple sessTup = new SessionTuple(sid, loc[0]);
 			SessionState state = new SessionState(sessTup, ver, message, timeout);
-//			sessionWrite(sid, loc[0], ver, message, InetAddress.getByName(SvrID));
+			//			sessionWrite(sid, loc[0], ver, message, InetAddress.getByName(SvrID));
 			map.put(sessTup, state);
 
 			// construct cookie
@@ -262,7 +262,7 @@ public class MyServlet extends HttpServlet
 			c = new Cookie(cookieName, concatPrint(sess, ver, loc));
 			c.setMaxAge(SESSION_TIMEOUT_SECS);	// set timeout!!!
 			c.setComment(message);
-			System.out.println(c.getValue());
+			//			System.out.println(c.getValue());
 			// send cookie back to client
 			response.addCookie(c);
 
@@ -295,6 +295,13 @@ public class MyServlet extends HttpServlet
 					{
 						// forward information to jsp page and display it
 						request.setAttribute("loc", "line 242");
+						// send a dead cookie
+						Cookie myDeadCookie = new Cookie(cookieName, "");
+						myDeadCookie.setMaxAge(0);
+						myDeadCookie.setValue(null);
+
+						// send cookie back to client
+						response.addCookie(myDeadCookie);
 						request.getRequestDispatcher("/error.jsp").forward(request, response);
 						//						TODO: Send timeout zero cookie on failures
 						return;
@@ -379,13 +386,13 @@ public class MyServlet extends HttpServlet
 				String reply = sessionRead(sessNum, servNum, verNum, inetLocs);
 				if (reply == null)
 				{
-					//					// send a dead cookie
-					//					Cookie myDeadCookie = new Cookie(cookieName, "");
-					//					myDeadCookie.setMaxAge(0);
-					//					myDeadCookie.setValue(null);
-					//					
-					//					// send cookie back to client
-					//					response.addCookie(myDeadCookie);
+					// send a dead cookie
+					Cookie myDeadCookie = new Cookie(cookieName, "");
+					myDeadCookie.setMaxAge(0);
+					myDeadCookie.setValue(null);
+
+					// send cookie back to client
+					response.addCookie(myDeadCookie);
 
 					// forward information to jsp page and display it
 					request.setAttribute("loc", "line 331");
@@ -434,9 +441,9 @@ public class MyServlet extends HttpServlet
 					// store updated info to map (choose primary server)
 					SessionTuple sessTup = new SessionTuple(Integer.valueOf(sess[0]), loc[0]);
 					SessionState state = new SessionState(sessTup, ver, message, timeout);
-//					sessionWrite(Integer.valueOf(sess[0]), loc[0], ver, message, InetAddress.getByName(SvrID));
+					//					sessionWrite(Integer.valueOf(sess[0]), loc[0], ver, message, InetAddress.getByName(SvrID));
 					map.put(sessTup, state);
-					
+
 					// kill current cookie
 					myCookie.setMaxAge(0);
 					myCookie.setValue(null);
@@ -540,6 +547,13 @@ public class MyServlet extends HttpServlet
 					if (ss == null)
 					{
 						// forward information to jsp page and display it
+						// send a dead cookie
+						Cookie myDeadCookie = new Cookie(cookieName, "");
+						myDeadCookie.setMaxAge(0);
+						myDeadCookie.setValue(null);
+
+						// send cookie back to client
+						response.addCookie(myDeadCookie);
 						request.setAttribute("loc", "line 478");
 						request.getRequestDispatcher("/error.jsp").forward(request, response);
 						return;
@@ -641,13 +655,13 @@ public class MyServlet extends HttpServlet
 				System.out.println(reply);
 				if (reply == null)
 				{
-					//					// send a dead cookie
-					//					myCookie = new Cookie(cookieName, "");
-					//					myCookie.setMaxAge(0);
-					//					myCookie.setValue(null);
-					//					
-					//					// send cookie back to client
-					//					response.addCookie(myCookie);
+					// send a dead cookie
+					Cookie myDeadCookie = new Cookie(cookieName, "");
+					myDeadCookie.setMaxAge(0);
+					myDeadCookie.setValue(null);
+
+					// send cookie back to client
+					response.addCookie(myDeadCookie);
 
 					// forward information to jsp page and display it
 					request.setAttribute("loc", "line 583 " + SvrID + " " + strLocs[0] + " " + inetLocs[0] + " " 
@@ -707,9 +721,9 @@ public class MyServlet extends HttpServlet
 			// store updated info to map (choose primary server)
 			SessionTuple sessTup = new SessionTuple(Integer.valueOf(sess[0]), loc[0]);
 			SessionState state = new SessionState(sessTup, ver, message, timeout);
-//			sessionWrite(Integer.valueOf(sess[0]), loc[0], ver, message, InetAddress.getByName(SvrID));
+			//			sessionWrite(Integer.valueOf(sess[0]), loc[0], ver, message, InetAddress.getByName(SvrID));
 			map.put(sessTup, state);
-			
+
 			// kill current cookie
 			myCookie.setMaxAge(0);
 			myCookie.setValue(null);
@@ -1069,6 +1083,7 @@ public class MyServlet extends HttpServlet
 						if (opCode == SESSIONREAD) {
 							System.out.println("ENTER READ");
 							int sessNum = bbuf.getInt();
+							System.out.println("Session number: " + sessNum);
 							int sessionVersionNum = bbuf.getInt();
 							//							StringBuffer stringbuf = new StringBuffer();
 							//							boolean valid = true;
@@ -1088,23 +1103,29 @@ public class MyServlet extends HttpServlet
 							serverIdAddr = serverIdAddr.trim();
 							SessionTuple sessTup = new SessionTuple(sessNum, serverIdAddr);
 							SessionState sessState = map.get(sessTup);
-							//							for (SessionTuple s : map.keySet()) {
-							//								SessionState state = map.get(s);
-							//								System.out.println("num: " + state.sessionID.sessionNum + " sid: " + state.sessionID.serverId + " msg: " + state.message);
-							//							}
-							//							System.out.println("sessTup num: " + sessTup.sessionNum + " svrid: " + sessTup.serverId);
-							//							System.out.println(sessionVersionNum);
-							if (sessState != null && sessState.version==sessionVersionNum) {
+
+							System.out.println("Read request: sessNum~" + sessNum + "/serverIdAddr~" + serverIdAddr + "/callId~" + cid + "/returnAddr~" + returnAddr.getHostAddress());
+							System.out.println("Map: -------------------------------------");
+							for (SessionTuple s : map.keySet()) {
+								SessionState state = map.get(s);
+								System.out.println("num: " + state.sessionID.sessionNum + " sid: " + state.sessionID.serverId + " msg: " + state.message);
+							}
+							System.out.println("State: " + sessState);
+							if (sessState != null) {
 								bbuf = ByteBuffer.allocate(4 + 1 + sessState.message.length()*2);
 								bbuf.putInt(cid);
 								bbuf.put((byte) 1);
 								for (byte b : sessState.message.getBytes()) {
 									bbuf.put(b);
 								}
+								System.out.println("success!");
+
 							} else {
 								bbuf = ByteBuffer.allocate(4 + 1);
 								bbuf.putInt(cid);
 								bbuf.put((byte) 0);
+
+								System.out.println("failure!");
 							}
 							outBuf = bbuf.array();
 						} else if (opCode==SESSIONWRITE) {
@@ -1215,14 +1236,14 @@ public class MyServlet extends HttpServlet
 						{
 							// nothing's in view
 							temp = new View();
-							System.out.println("GOSSIP BREAK");
+							//							System.out.println("GOSSIP BREAK");
 							break;
 						}
 						else
 						{
 							//		TODO: Need RPC call for GetView written
 							try {
-								System.out.println("GOSSIP: " + InetAddress.getByName(ip));
+								//								System.out.println("GOSSIP: " + InetAddress.getByName(ip));
 								temp = getView(InetAddress.getByName(ip));				// TODO: this always returns null (socket timeout)
 							} catch (UnknownHostException e) {
 								// TODO Auto-generated catch block
@@ -1230,8 +1251,8 @@ public class MyServlet extends HttpServlet
 							}
 						}
 					}
-					System.out.println("Gossip temp: " + temp);
-					System.out.println("Gossip view: " + view);
+					//					System.out.println("Gossip temp: " + temp);
+					//					System.out.println("Gossip view: " + view);
 					View.union(temp, view);
 					View.remove(temp, SvrID);
 					View.shrink(temp, ViewSz);
@@ -1258,13 +1279,13 @@ public class MyServlet extends HttpServlet
 				while(true)
 				{
 					View temp = ViewDB.readSDBView(ViewSz);
-					System.out.println("BootStrap temp: " + temp);
-					System.out.println("BootStrap view: " + view);
+					//					System.out.println("BootStrap temp: " + temp);
+					//					System.out.println("BootStrap view: " + view);
 					View.remove(temp, SvrID);
 					View.union(temp, view);
 					View.shrink(temp, ViewSz);
 					view = View.copy(temp);
-					System.out.println("BootStrap view2: " + view);
+					//					System.out.println("BootStrap view2: " + view);
 					View.insert(temp, SvrID);
 					View.shrink(temp, ViewSz);
 					ViewDB.writeSDBView(temp, ViewSz);
