@@ -156,6 +156,23 @@ public class MyServlet extends HttpServlet
 
 
 	public void setSvrID(){
+<<<<<<< HEAD
+//		try {
+//			SvrID = InetAddress.getLocalHost().getHostAddress();
+//		} catch (UnknownHostException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		Runtime r = Runtime.getRuntime();
+//		Process blah;
+//		String IPAddress = "0.0.0.0";
+//		try {
+//			SvrID = InetAddress.getLocalHost().getHostAddress();
+//		} catch (UnknownHostException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+=======
 		//		try {
 		//			SvrID = InetAddress.getLocalHost().getHostAddress();
 		//		} catch (UnknownHostException e) {
@@ -171,6 +188,7 @@ public class MyServlet extends HttpServlet
 		//			// TODO Auto-generated catch block
 		//			e.printStackTrace();
 		//		}
+>>>>>>> 97cc196a833bcdba9a124b4d803245e2b8e619df
 		Runtime r = Runtime.getRuntime();
 		Process blah;
 		String IPAddress = "0.0.0.0";
@@ -361,7 +379,7 @@ public class MyServlet extends HttpServlet
 					// forward information to jsp page
 					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
-					request.setAttribute("myLocation", "Existing session found locally in " + SvrID);
+					request.setAttribute("myLocation", "Existing session found LOCALLY in " + SvrID);
 					request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
 					request.setAttribute("myDis", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS + DISCARD_TIME_DELTA);
 					request.setAttribute("myView", view.toString());
@@ -458,7 +476,7 @@ public class MyServlet extends HttpServlet
 					// forward information to jsp page
 					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
-					request.setAttribute("myLocation", "Existing session found remotely in " + SvrID);
+					request.setAttribute("myLocation", "Existing session found REMOTELY in " + SvrID);
 					// TODO: have sessionRead return the serverIP who replied 
 					request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
 					request.setAttribute("myDis", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS + DISCARD_TIME_DELTA);
@@ -625,7 +643,7 @@ public class MyServlet extends HttpServlet
 					// forward information to jsp page
 					request.setAttribute("myVal", concatPrint(sess, ver, loc));
 					request.setAttribute("myMessage", c.getComment());
-					request.setAttribute("myLocation", "Existing session found locally in " + SvrID);
+					request.setAttribute("myLocation", "Existing session found LOCALLY in " + SvrID);
 					request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
 					request.setAttribute("myDis", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS + DISCARD_TIME_DELTA);
 					request.setAttribute("myView", view.toString());
@@ -738,7 +756,7 @@ public class MyServlet extends HttpServlet
 			// forward information to jsp page
 			request.setAttribute("myVal", concatPrint(sess, ver, loc));
 			request.setAttribute("myMessage", c.getComment());
-			request.setAttribute("myLocation", "Existing session found locally in " + SvrID);
+			request.setAttribute("myLocation", "Existing session found REMOTELY in " + SvrID);
 			// TODO: have sessionRead return the serverIP who replied 
 			request.setAttribute("myExp", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS);
 			request.setAttribute("myDis", (int)(System.currentTimeMillis()/1000) + SESSION_TIMEOUT_SECS + DISCARD_TIME_DELTA);
